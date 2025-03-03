@@ -43,7 +43,7 @@ export function Navbar() {
           <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
             <span className="text-white font-semibold text-lg">R</span>
           </div>
-          <span className="font-medium text-xl">RetailReports</span>
+          <span className="font-medium text-xl hidden sm:inline">RetailReports</span>
         </Link>
         
         {/* Desktop navigation */}
