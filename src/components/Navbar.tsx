@@ -39,7 +39,12 @@ export function Navbar() {
       scrolled ? 'glass shadow-sm py-2' : 'bg-transparent py-4'
     )}>
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to="/" className={cn(
+          "flex items-center space-x-2",
+          // Hide the title text when at the top of the home page
+          location.pathname === '/' && !scrolled ? 'opacity-0' : 'opacity-100',
+          "transition-opacity duration-200"
+        )}>
           <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
             <span className="text-white font-semibold text-lg">R</span>
           </div>

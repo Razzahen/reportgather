@@ -29,12 +29,12 @@ const Index = () => {
         )}
       >
         <Navbar />
-        <main className="container mx-auto px-4 py-8 pt-24">
+        <main className="container mx-auto px-4 py-8 pt-32">
           <CEODashboard />
         </main>
       </div>
     </div>
   );
-};
+}
 
 export default Index;

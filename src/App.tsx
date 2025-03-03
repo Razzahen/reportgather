@@ -20,7 +20,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
     <SideMenu className="z-50" />
     <div className="flex-1 ml-16 md:ml-64">
       <Navbar />
-      <main className="container mx-auto px-4 py-8 pt-28">
+      <main className="container mx-auto px-4 py-8 pt-32">
         {children}
       </main>
     </div>
