@@ -20,6 +20,18 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/templates" element={
+            <div className="min-h-screen flex w-full bg-background">
+              <div className="flex-1 ml-16 md:ml-64">
+                <main className="container mx-auto px-4 py-8 pt-24">
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Templates</h1>
+                  <p className="text-muted-foreground mb-8">
+                    View and manage your report templates
+                  </p>
+                </main>
+              </div>
+            </div>
+          } />
           <Route path="/templates/create" element={
             <div className="min-h-screen flex w-full bg-background">
               <div className="flex-1 ml-16 md:ml-64">
