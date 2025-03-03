@@ -9,8 +9,23 @@ import NotFound from "./pages/NotFound";
 import CreateTemplate from "./components/CreateTemplate";
 import StoreReports from "./components/StoreReports";
 import ReportSummary from "./components/ReportSummary";
+import { SideMenu } from "./components/SideMenu";
+import Navbar from "./components/Navbar";
+import TemplatesList from "./components/TemplatesList";
 
 const queryClient = new QueryClient();
+
+const AppLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen flex w-full bg-background">
+    <SideMenu className="z-50" />
+    <div className="flex-1 ml-16 md:ml-64">
+      <Navbar />
+      <main className="container mx-auto px-4 py-8 pt-24">
+        {children}
+      </main>
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -21,43 +36,28 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/templates" element={
-            <div className="min-h-screen flex w-full bg-background">
-              <div className="flex-1 ml-16 md:ml-64">
-                <main className="container mx-auto px-4 py-8 pt-24">
-                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Templates</h1>
-                  <p className="text-muted-foreground mb-8">
-                    View and manage your report templates
-                  </p>
-                </main>
-              </div>
-            </div>
+            <AppLayout>
+              <h1 className="text-3xl font-semibold tracking-tight mb-6">Templates</h1>
+              <p className="text-muted-foreground mb-8">
+                View and manage your report templates
+              </p>
+              <TemplatesList />
+            </AppLayout>
           } />
           <Route path="/templates/create" element={
-            <div className="min-h-screen flex w-full bg-background">
-              <div className="flex-1 ml-16 md:ml-64">
-                <main className="container mx-auto px-4 py-8 pt-24">
-                  <CreateTemplate />
-                </main>
-              </div>
-            </div>
+            <AppLayout>
+              <CreateTemplate />
+            </AppLayout>
           } />
           <Route path="/reports" element={
-            <div className="min-h-screen flex w-full bg-background">
-              <div className="flex-1 ml-16 md:ml-64">
-                <main className="container mx-auto px-4 py-8 pt-24">
-                  <StoreReports />
-                </main>
-              </div>
-            </div>
+            <AppLayout>
+              <StoreReports />
+            </AppLayout>
           } />
           <Route path="/summaries" element={
-            <div className="min-h-screen flex w-full bg-background">
-              <div className="flex-1 ml-16 md:ml-64">
-                <main className="container mx-auto px-4 py-8 pt-24">
-                  <ReportSummary />
-                </main>
-              </div>
-            </div>
+            <AppLayout>
+              <ReportSummary />
+            </AppLayout>
           } />
           <Route path="*" element={<NotFound />} />
         </Routes>
