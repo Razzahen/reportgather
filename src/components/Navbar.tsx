@@ -33,6 +33,9 @@ export function Navbar() {
     { name: 'Summaries', path: '/summaries' },
   ];
 
+  // Hide the title on all routes when not scrolled
+  const shouldHideTitle = !scrolled;
+
   return (
     <header className={cn(
       'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
@@ -41,8 +44,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link to="/" className={cn(
           "flex items-center space-x-2",
-          // Hide the title text when at the top of the home page
-          location.pathname === '/' && !scrolled ? 'opacity-0' : 'opacity-100',
+          shouldHideTitle ? 'opacity-0' : 'opacity-100',
           "transition-opacity duration-200"
         )}>
           <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
