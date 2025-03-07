@@ -4,7 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CreateTemplate from "./components/CreateTemplate";
 import StoreReports from "./components/StoreReports";
@@ -12,6 +14,7 @@ import ReportSummary from "./components/ReportSummary";
 import { SideMenu } from "./components/SideMenu";
 import Navbar from "./components/Navbar";
 import TemplatesList from "./components/TemplatesList";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -29,40 +32,61 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/templates" element={
-            <AppLayout>
-              <h1 className="text-3xl font-semibold tracking-tight mb-6">Templates</h1>
-              <p className="text-muted-foreground mb-8">
-                View and manage your report templates
-              </p>
-              <TemplatesList />
-            </AppLayout>
-          } />
-          <Route path="/templates/create" element={
-            <AppLayout>
-              <CreateTemplate />
-            </AppLayout>
-          } />
-          <Route path="/reports" element={
-            <AppLayout>
-              <StoreReports />
-            </AppLayout>
-          } />
-          <Route path="/summaries" element={
-            <AppLayout>
-              <ReportSummary />
-            </AppLayout>
-          } />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/templates" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Templates</h1>
+                  <p className="text-muted-foreground mb-8">
+                    View and manage your report templates
+                  </p>
+                  <TemplatesList />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/templates/create" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <CreateTemplate />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/reports" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <StoreReports />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/summaries" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ReportSummary />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

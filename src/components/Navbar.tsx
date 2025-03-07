@@ -1,14 +1,24 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut, isAuthenticated } = useAuth();
   
   // Change navbar appearance on scroll
   useEffect(() => {
@@ -70,10 +80,42 @@ export function Navbar() {
         </nav>
         
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="outline" size="sm">
-            Log In
-          </Button>
-          <Button size="sm">Get Started</Button>
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <User size={16} />
+                  <span className="hidden sm:inline">{user?.email?.split('@')[0]}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Link to="/profile" className="flex w-full">Profile Settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <button onClick={signOut} className="flex items-center w-full">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </button>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="outline" size="sm">
+                  Log In
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="sm" onClick={() => document.querySelector<HTMLButtonElement>('[data-toggle-signup]')?.click()}>
+                  Get Started
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
         
         {/* Mobile menu button */}
@@ -106,12 +148,34 @@ export function Navbar() {
             </Link>
           ))}
           <div className="pt-4 border-t border-border flex flex-col space-y-2">
-            <Button variant="outline" className="w-full justify-start">
-              Log In
-            </Button>
-            <Button className="w-full justify-start">
-              Get Started
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Link to="/profile" className="w-full">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <User size={16} />
+                    Profile Settings
+                  </Button>
+                </Link>
+                <Button className="w-full justify-start gap-2" onClick={signOut}>
+                  <LogOut size={16} />
+                  Log Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="outline" className="w-full justify-start">
+                    Log In
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button className="w-full justify-start" 
+                    onClick={() => document.querySelector<HTMLButtonElement>('[data-toggle-signup]')?.click()}>
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
