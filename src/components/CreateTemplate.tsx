@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save, ArrowLeft, ClipboardCheck } from 'lucide-react';
@@ -9,15 +8,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { generateId, QuestionType } from '@/utils/mockData';
+import { Question } from '@/types/supabase';
+import { createTemplate } from '@/services/templateService';
 import { toast } from 'sonner';
+import { useMutation } from '@tanstack/react-query';
 
 interface QuestionInput {
   id: string;
   text: string;
-  type: QuestionType;
+  type: 'text' | 'number' | 'choice' | 'date';
   required: boolean;
-  options: string[];
+  options: string[] | null;
+  order_index: number;
 }
 
 export function CreateTemplate() {
@@ -26,23 +28,49 @@ export function CreateTemplate() {
   const [description, setDescription] = useState('');
   const [questions, setQuestions] = useState<QuestionInput[]>([
     {
-      id: generateId(),
+      id: crypto.randomUUID(),
       text: '',
       type: 'text',
       required: true,
-      options: []
+      options: null,
+      order_index: 0
     }
   ]);
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const templateData = {
+        title,
+        description
+      };
+
+      const questionsData = questions.map((q, index) => ({
+        ...q,
+        order_index: index
+      }));
+
+      return await createTemplate(templateData, questionsData);
+    },
+    onSuccess: () => {
+      toast.success("Template created successfully!");
+      navigate('/templates');
+    },
+    onError: (error: any) => {
+      console.error('Error creating template:', error);
+      toast.error(error.message || "Failed to create template. Please try again.");
+    }
+  });
 
   const handleAddQuestion = () => {
     setQuestions([
       ...questions,
       {
-        id: generateId(),
+        id: crypto.randomUUID(),
         text: '',
         type: 'text',
         required: true,
-        options: []
+        options: null,
+        order_index: questions.length
       }
     ]);
   };
@@ -62,13 +90,11 @@ export function CreateTemplate() {
     const newQuestions = [...questions];
     newQuestions[index] = { ...newQuestions[index], [field]: value };
     
-    // Reset options if type is changed from choice
     if (field === 'type' && value !== 'choice') {
-      newQuestions[index].options = [];
+      newQuestions[index].options = null;
     }
     
-    // Add a default option if type is changed to choice
-    if (field === 'type' && value === 'choice' && newQuestions[index].options.length === 0) {
+    if (field === 'type' && value === 'choice' && (!newQuestions[index].options || newQuestions[index].options.length === 0)) {
       newQuestions[index].options = ['Option 1'];
     }
     
@@ -77,18 +103,24 @@ export function CreateTemplate() {
 
   const handleOptionChange = (questionIndex: number, optionIndex: number, value: string) => {
     const newQuestions = [...questions];
-    newQuestions[questionIndex].options[optionIndex] = value;
-    setQuestions(newQuestions);
+    if (newQuestions[questionIndex].options) {
+      newQuestions[questionIndex].options[optionIndex] = value;
+      setQuestions(newQuestions);
+    }
   };
 
   const handleAddOption = (questionIndex: number) => {
     const newQuestions = [...questions];
+    if (!newQuestions[questionIndex].options) {
+      newQuestions[questionIndex].options = [];
+    }
     newQuestions[questionIndex].options.push(`Option ${newQuestions[questionIndex].options.length + 1}`);
     setQuestions(newQuestions);
   };
 
   const handleRemoveOption = (questionIndex: number, optionIndex: number) => {
-    if (questions[questionIndex].options.length === 1) {
+    const question = questions[questionIndex];
+    if (!question.options || question.options.length <= 1) {
       toast.error("You need at least one option for choice questions");
       return;
     }
@@ -101,7 +133,6 @@ export function CreateTemplate() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
     if (!title.trim()) {
       toast.error("Please enter a template title");
       return;
@@ -118,15 +149,13 @@ export function CreateTemplate() {
         return;
       }
       
-      if (questions[i].type === 'choice' && questions[i].options.length === 0) {
+      if (questions[i].type === 'choice' && (!questions[i].options || questions[i].options.length === 0)) {
         toast.error(`Question ${i + 1} needs at least one option`);
         return;
       }
     }
     
-    // Submit the template
-    toast.success("Template created successfully!");
-    navigate('/templates');
+    createMutation.mutate();
   };
 
   return (

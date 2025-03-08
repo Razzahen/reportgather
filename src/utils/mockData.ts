@@ -1,4 +1,3 @@
-
 export type QuestionType = 'text' | 'number' | 'choice' | 'date';
 
 export interface Question {
@@ -122,7 +121,6 @@ export const mockSummary = {
   ]
 };
 
-// Utility function to generate a unique ID
 export const generateId = () => {
-  return Math.random().toString(36).substring(2, 9);
+  return crypto.randomUUID();
 };

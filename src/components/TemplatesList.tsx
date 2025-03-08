@@ -11,30 +11,61 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import { mockTemplates, Template } from '@/utils/mockData';
+import { Template } from '@/types/supabase';
+import { getTemplates, deleteTemplate } from '@/services/templateService';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export function TemplatesList() {
-  const [templates, setTemplates] = useState<Template[]>(mockTemplates);
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
   
+  // Fetch templates from Supabase
+  const { data: templates = [], isLoading, error } = useQuery({
+    queryKey: ['templates'],
+    queryFn: getTemplates
+  });
+  
+  // Delete template mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      toast.success("Template deleted successfully");
+    },
+    onError: (error) => {
+      console.error('Error deleting template:', error);
+      toast.error("Failed to delete template");
+    }
+  });
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this template?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  // Filter templates based on search query
   const filteredTemplates = templates.filter(template => 
     template.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     template.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDelete = (id: string) => {
-    setTemplates(templates.filter(template => template.id !== id));
-    toast.success("Template deleted successfully");
-  };
-
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
-    }).format(date);
+    }).format(new Date(dateString));
   };
+
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-destructive">Error loading templates. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -58,7 +89,11 @@ export function TemplatesList() {
         </Button>
       </div>
       
-      {filteredTemplates.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : filteredTemplates.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
           <FileText size={64} className="text-muted-foreground mb-4 opacity-20" />
           <h3 className="text-xl font-medium">No templates found</h3>
@@ -84,7 +119,7 @@ export function TemplatesList() {
                     <h3 className="font-medium text-lg">{template.title}</h3>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <Calendar size={14} className="mr-1" />
-                      <span>Created {formatDate(template.created)}</span>
+                      <span>Created {formatDate(template.created_at)}</span>
                     </div>
                   </div>
                   <DropdownMenu>
@@ -97,13 +132,21 @@ export function TemplatesList() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Edit size={14} className="mr-2" />
-                        Edit Template
+                      <DropdownMenuItem asChild>
+                        <Link to={`/templates/edit/${template.id}`} className="flex items-center">
+                          <Edit size={14} className="mr-2" />
+                          Edit Template
+                        </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(template.id)}>
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive" 
+                        onClick={() => handleDelete(template.id)}
+                        disabled={deleteMutation.isPending}
+                      >
                         <Trash2 size={14} className="mr-2" />
-                        Delete Template
+                        {deleteMutation.isPending && deleteMutation.variables === template.id 
+                          ? "Deleting..." 
+                          : "Delete Template"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -114,7 +157,9 @@ export function TemplatesList() {
               </CardContent>
               <CardFooter className="bg-muted/50 px-6 py-3 flex justify-between items-center">
                 <div className="text-sm">
-                  <span className="font-medium">{template.questions.length}</span> questions
+                  <span className="font-medium">
+                    {template.questions?.length || 0}
+                  </span> questions
                 </div>
                 <Button variant="outline" size="sm" asChild>
                   <Link to={`/templates/${template.id}`}>
