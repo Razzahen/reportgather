@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Template, Question } from '@/types/supabase';
 
@@ -18,6 +17,24 @@ export const getTemplates = async (): Promise<Template[]> => {
   }
 
   return data || [];
+};
+
+export const getTemplateById = async (id: string): Promise<Template | null> => {
+  const { data, error } = await supabase
+    .from('templates')
+    .select(`
+      *,
+      questions:questions(*)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching template:', error);
+    throw error;
+  }
+
+  return data;
 };
 
 export const getTemplateWithQuestions = async (id: string): Promise<Template | null> => {

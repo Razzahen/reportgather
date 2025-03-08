@@ -19,6 +19,7 @@ import ViewTemplate from "./components/ViewTemplate";
 import EditTemplate from "./components/EditTemplate";
 import Stores from "./components/Stores";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ReportForm from "./components/report-form/ReportForm";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,6 +109,22 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <StoreReports />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/reports/:storeId" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ReportForm />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/reports/edit/:reportId" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ReportForm />
                 </AppLayout>
               </ProtectedRoute>
             } />

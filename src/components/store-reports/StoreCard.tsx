@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckSquare, Clock, StoreIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Store, Report } from '@/types/supabase';
+import { Button } from '@/components/ui/button';
 
 interface StoreCardProps {
   store: Store;
@@ -14,11 +15,21 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
   const navigate = useNavigate();
   const isSubmitted = !!storeReport;
 
+  const handleCardClick = () => {
+    if (isSubmitted) {
+      // Navigate to edit the existing report
+      navigate(`/reports/edit/${storeReport?.id}`);
+    } else {
+      // Navigate to create a new report
+      navigate(`/reports/${store.id}`);
+    }
+  };
+
   return (
     <Card 
       key={store.id} 
       className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer border-l-4 ${isSubmitted ? 'border-l-green-500' : 'border-l-amber-500'}`}
-      onClick={() => navigate(`/reports/${store.id}`)}
+      onClick={handleCardClick}
     >
       <CardContent className="p-5">
         <div className="flex justify-between items-start">

@@ -14,10 +14,20 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
   const navigate = useNavigate();
   const isSubmitted = !!storeReport;
   
+  const handleRowClick = () => {
+    if (isSubmitted) {
+      // Navigate to edit the existing report
+      navigate(`/reports/edit/${storeReport?.id}`);
+    } else {
+      // Navigate to create a new report
+      navigate(`/reports/${store.id}`);
+    }
+  };
+  
   return (
     <div 
       className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20 cursor-pointer"
-      onClick={() => navigate(`/reports/${store.id}`)}
+      onClick={handleRowClick}
     >
       <div className="col-span-5 flex items-center">
         <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />

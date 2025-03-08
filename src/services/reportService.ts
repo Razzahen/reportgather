@@ -66,6 +66,13 @@ export const createReport = async (
   report: Omit<Report, 'id' | 'created_at' | 'updated_at' | 'user_id'>,
   answers: Omit<ReportAnswer, 'id' | 'report_id' | 'created_at' | 'updated_at'>[]
 ): Promise<Report> => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be logged in to create a report');
+  }
+  
   // Start a transaction
   const { data: reportData, error: reportError } = await supabase
     .from('reports')
@@ -73,7 +80,8 @@ export const createReport = async (
       template_id: report.template_id,
       store_id: report.store_id,
       submitted_at: report.submitted_at,
-      completed: report.completed
+      completed: report.completed,
+      user_id: user.id // Set the user_id to the current user's ID
     })
     .select()
     .single();
