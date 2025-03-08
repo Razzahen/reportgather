@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Store, Report, Template } from '@/types/supabase';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, CheckSquare, Clock, ClipboardList, FormInput } from 'lucide-react';
+import { MapPin, User, CheckSquare, Clock, ClipboardList, FormInput, FileText } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
