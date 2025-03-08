@@ -158,8 +158,10 @@ h3 {
 }
 
 /* Text handling utilities */
-.text-ellipsis {
-  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+.truncate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .line-clamp-1 {

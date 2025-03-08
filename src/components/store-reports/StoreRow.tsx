@@ -83,12 +83,12 @@ export function StoreRow({
     <div className="grid grid-cols-12 border-b px-4 py-4 items-center">
       <div className="col-span-12 md:col-span-4 mb-2 md:mb-0">
         <div className="flex flex-col">
-          <div className="font-medium truncate">{store.name}</div>
-          <div className="text-sm text-muted-foreground truncate">{store.location}</div>
+          <div className="font-medium truncate-text">{store.name}</div>
+          <div className="text-sm text-muted-foreground truncate-text">{store.location}</div>
         </div>
       </div>
       
-      <div className="hidden md:block md:col-span-2 truncate">
+      <div className="hidden md:block md:col-span-2 truncate-text">
         {store.manager}
       </div>
       
@@ -106,7 +106,7 @@ export function StoreRow({
             </SelectTrigger>
             <SelectContent>
               {templates.map((template) => (
-                <SelectItem key={template.id} value={template.id} className="truncate">
+                <SelectItem key={template.id} value={template.id} className="truncate-text">
                   {template.title}
                 </SelectItem>
               ))}
