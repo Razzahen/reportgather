@@ -186,9 +186,9 @@ export function ChatInterface({ stores, reports, storeFilter, initialMessage }: 
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask a question about the store reports..."
-            className="min-h-10 flex-1 resize-none"
-            maxRows={5}
+            className="min-h-10 resize-none flex-1"
             disabled={loading}
+            style={{ maxHeight: '120px', overflow: 'auto' }}
           />
           <Button 
             size="icon" 

@@ -27,9 +27,5 @@ site_url = "http://localhost:5173"
 [storage]
 enabled = true
 
-[edges]
-enabled = true
-
-[[functions]]
-name = "ai-summary"
+[functions.ai-summary]
 verify_jwt = true
