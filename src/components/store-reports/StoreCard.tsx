@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Store, Report, Template } from '@/types/supabase';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, CheckSquare, Clock } from 'lucide-react';
+import { MapPin, User, CheckSquare, Clock, ClipboardList, FormInput } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -18,16 +18,20 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuery } from '@tanstack/react-query';
 import { getTemplates } from '@/services/templateService';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface StoreCardProps {
   store: Store;
   storeReport?: Report;
+  template?: Template;
 }
 
-export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
+export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSubmitted = !!storeReport;
   
   // Fetch templates
   const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
@@ -35,12 +39,24 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
     queryFn: getTemplates
   });
   
-  const handleCreateReport = () => {
+  const handleAssignTemplate = () => {
     if (templates.length === 0) {
       toast.error("No templates available. Please create a template first.");
       return;
     }
     setShowTemplateDialog(true);
+  };
+  
+  const handleCompleteForm = () => {
+    if (isSubmitted) {
+      // Navigate to view the existing report
+      navigate(`/reports/edit/${storeReport.id}`);
+    } else if (template) {
+      // Navigate to create a new report with the assigned template
+      navigate(`/reports/${store.id}?templateId=${template.id}`);
+    } else {
+      toast.error("This store has no template assigned. Please assign a template first.");
+    }
   };
   
   const handleTemplateSelect = () => {
@@ -54,12 +70,6 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
     setShowTemplateDialog(false);
   };
   
-  const handleViewReport = () => {
-    if (storeReport) {
-      navigate(`/reports/edit/${storeReport.id}`);
-    }
-  };
-  
   return (
     <>
       <Card className="h-full">
@@ -67,7 +77,7 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
           <div className="space-y-2">
             <div className="flex justify-between items-start">
               <h3 className="font-semibold text-lg">{store.name}</h3>
-              {storeReport ? (
+              {isSubmitted ? (
                 <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
                   <CheckSquare className="h-3 w-3 mr-1" />
                   Complete
@@ -87,26 +97,35 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
               <User size={14} className="mr-2 text-muted-foreground" />
               <span>Manager: {store.manager}</span>
             </div>
+            {template && (
+              <div className="flex items-center text-sm">
+                <FileText size={14} className="mr-2 text-muted-foreground" />
+                <span>Template: {template.title}</span>
+              </div>
+            )}
           </div>
         </CardContent>
-        <CardFooter className="border-t pt-4 flex justify-between">
-          {storeReport ? (
-            <Button 
-              variant="default" 
-              className="w-full"
-              onClick={handleViewReport}
-            >
-              View Report
-            </Button>
-          ) : (
-            <Button 
-              variant="default" 
-              className="w-full" 
-              onClick={handleCreateReport}
-            >
-              Create Report
-            </Button>
-          )}
+        <CardFooter className="border-t pt-4 flex justify-between gap-2">
+          {/* In future, this button will only be visible to managers/admins */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleAssignTemplate}
+            className="flex-1"
+          >
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Assign Template
+          </Button>
+          
+          <Button 
+            variant={isSubmitted ? "secondary" : "default"}
+            size="sm" 
+            onClick={handleCompleteForm}
+            className="flex-1"
+          >
+            <FormInput className="h-4 w-4 mr-2" />
+            {isSubmitted ? "View Report" : "Complete Form"}
+          </Button>
         </CardFooter>
       </Card>
       
@@ -114,9 +133,9 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Select Template</DialogTitle>
+            <DialogTitle>Assign Template to Store</DialogTitle>
             <DialogDescription>
-              Choose a template for creating a report for {store.name}
+              Select a report template to assign to {store.name}
             </DialogDescription>
           </DialogHeader>
           
@@ -164,7 +183,8 @@ export const StoreCard = ({ store, storeReport }: StoreCardProps) => {
               onClick={handleTemplateSelect} 
               disabled={!selectedTemplate || isLoadingTemplates}
             >
-              Continue
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Assign Template
             </Button>
           </DialogFooter>
         </DialogContent>

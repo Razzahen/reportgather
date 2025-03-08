@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckSquare, Clock, FileText, StoreIcon, ClipboardList } from 'lucide-react';
+import { CheckSquare, Clock, FileText, StoreIcon, ClipboardList, FormInput } from 'lucide-react';
 import { Store, Report, Template } from '@/types/supabase';
 import { 
   Dialog,
@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuery } from '@tanstack/react-query';
 import { getTemplates } from '@/services/templateService';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface StoreRowProps {
   store: Store;
@@ -26,6 +27,7 @@ interface StoreRowProps {
 
 export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isSubmitted = !!storeReport;
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -36,16 +38,6 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
     queryFn: getTemplates
   });
   
-  const handleRowClick = () => {
-    if (isSubmitted) {
-      // Navigate to view the existing report
-      navigate(`/reports/edit/${storeReport?.id}`);
-    } else {
-      // Show the assign template dialog
-      handleAssignTemplate();
-    }
-  };
-  
   const handleAssignTemplate = () => {
     if (templates.length === 0) {
       toast.error("No templates available. Please create a template first.");
@@ -53,6 +45,18 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
     }
     // Show template selection dialog
     setShowTemplateDialog(true);
+  };
+  
+  const handleCompleteForm = () => {
+    if (isSubmitted) {
+      // Navigate to view the existing report
+      navigate(`/reports/edit/${storeReport?.id}`);
+    } else if (template) {
+      // Navigate to create a new report with the assigned template
+      navigate(`/reports/${store.id}?templateId=${template.id}`);
+    } else {
+      toast.error("This store has no template assigned. Please assign a template first.");
+    }
   };
   
   const handleTemplateSelect = () => {
@@ -68,23 +72,20 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
   
   return (
     <>
-      <div 
-        className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20 cursor-pointer"
-        onClick={handleRowClick}
-      >
-        <div className="col-span-5 flex items-center">
+      <div className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20">
+        <div className="col-span-4 flex items-center">
           <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
           <div>
             <div className="font-medium">{store.name}</div>
             <div className="text-xs text-muted-foreground">{store.location}</div>
           </div>
         </div>
-        <div className="col-span-3 text-sm">{store.manager}</div>
+        <div className="col-span-2 text-sm">{store.manager}</div>
         <div className="col-span-2 text-sm flex items-center">
           <FileText className="h-4 w-4 mr-2 text-primary/60" />
           {template ? template.title : 'Not assigned'}
         </div>
-        <div className="col-span-2 text-right">
+        <div className="col-span-2">
           {isSubmitted ? (
             <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
               <CheckSquare className="h-3 w-3 mr-1" />
@@ -96,6 +97,28 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
               Pending
             </span>
           )}
+        </div>
+        <div className="col-span-2 flex justify-end gap-2">
+          {/* In future, this button will only be visible to managers/admins */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleAssignTemplate}
+            className="flex items-center gap-1"
+          >
+            <ClipboardList className="h-3 w-3" />
+            <span className="hidden sm:inline">Assign</span>
+          </Button>
+          
+          <Button 
+            variant={isSubmitted ? "secondary" : "default"}
+            size="sm" 
+            onClick={handleCompleteForm}
+            className="flex items-center gap-1"
+          >
+            <FormInput className="h-3 w-3" />
+            <span className="hidden sm:inline">{isSubmitted ? "View" : "Complete"}</span>
+          </Button>
         </div>
       </div>
       

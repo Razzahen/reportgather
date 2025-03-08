@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +17,6 @@ export function StoreReports() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
-  // Fetch data from Supabase
   const { 
     data: stores = [], 
     isLoading: isLoadingStores,
@@ -46,7 +44,6 @@ export function StoreReports() {
     queryFn: getTemplates
   });
   
-  // Handle errors with useEffect
   useEffect(() => {
     if (storesError) {
       console.error('Error fetching stores:', storesError);
@@ -64,7 +61,6 @@ export function StoreReports() {
     }
   }, [storesError, reportsError, templatesError]);
   
-  // Format date for display
   const formatDate = (date: string) => {
     return new Intl.DateTimeFormat('en-US', {
       weekday: 'short',
@@ -73,7 +69,6 @@ export function StoreReports() {
     }).format(new Date(date));
   };
   
-  // Filter and sort the stores
   const filteredStores = stores
     .filter(store => {
       if (searchTerm) {
@@ -105,7 +100,6 @@ export function StoreReports() {
   const today = formatDate(new Date().toISOString());
   const isLoading = isLoadingStores || isLoadingReports || isLoadingTemplates;
   
-  // Debug logging
   useEffect(() => {
     console.log('Templates:', templates);
     console.log('Reports:', reports);
@@ -158,11 +152,16 @@ export function StoreReports() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredStores.map((store) => {
                       const storeReport = reports.find(r => r.store_id === store.id);
+                      const template = storeReport ? 
+                        templates.find(t => t.id === storeReport.template_id) : 
+                        undefined;
+                      
                       return (
                         <StoreCard 
                           key={store.id} 
                           store={store} 
-                          storeReport={storeReport} 
+                          storeReport={storeReport}
+                          template={template}
                         />
                       );
                     })}
@@ -173,10 +172,11 @@ export function StoreReports() {
               <TabsContent value="list">
                 <div className="rounded-md border">
                   <div className="grid grid-cols-12 border-b bg-muted/50 px-4 py-3 text-sm font-medium">
-                    <div className="col-span-5">Store</div>
-                    <div className="col-span-3">Manager</div>
+                    <div className="col-span-4">Store</div>
+                    <div className="col-span-2">Manager</div>
                     <div className="col-span-2">Template</div>
-                    <div className="col-span-2 text-right">Status</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-2 text-right">Actions</div>
                   </div>
                   
                   {filteredStores.length === 0 ? (
