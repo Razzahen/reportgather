@@ -34,7 +34,7 @@ export const StoreCard = ({ store, storeReport, template, onTemplateAssigned }: 
   const [isAssigning, setIsAssigning] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isSubmitted = !!storeReport;
+  const isSubmitted = storeReport?.completed || false;
   
   // Fetch templates
   const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
@@ -56,6 +56,9 @@ export const StoreCard = ({ store, storeReport, template, onTemplateAssigned }: 
   const handleCompleteForm = () => {
     if (isSubmitted) {
       // Navigate to view the existing report
+      navigate(`/reports/edit/${storeReport?.id}`);
+    } else if (storeReport && template) {
+      // Navigate to create a new report with the assigned template
       navigate(`/reports/edit/${storeReport.id}`);
     } else if (template) {
       // Navigate to create a new report with the assigned template
@@ -73,9 +76,8 @@ export const StoreCard = ({ store, storeReport, template, onTemplateAssigned }: 
     
     try {
       setIsAssigning(true);
-      // Here we would call a service to assign the template to the store
-      // For now, we're just mocking this behavior with a toast notification
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      // Call the service to assign the template to the store
+      await assignTemplateToStore(store.id, selectedTemplate);
       
       toast.success(`Template assigned to ${store.name}`);
       
@@ -87,7 +89,7 @@ export const StoreCard = ({ store, storeReport, template, onTemplateAssigned }: 
       setShowTemplateDialog(false);
     } catch (error) {
       console.error('Error assigning template:', error);
-      toast.error("Failed to assign template");
+      toast.error("Failed to assign template. Please try again.");
     } finally {
       setIsAssigning(false);
     }
@@ -99,7 +101,7 @@ export const StoreCard = ({ store, storeReport, template, onTemplateAssigned }: 
         <CardContent className="pt-6 flex-grow">
           <div className="space-y-2">
             <div className="flex justify-between items-start">
-              <h3 className="font-semibold text-lg">{store.name}</h3>
+              <h3 className="font-semibold text-lg truncate">{store.name}</h3>
               {isSubmitted ? (
                 <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
                   <CheckSquare className="h-3 w-3 mr-1" />

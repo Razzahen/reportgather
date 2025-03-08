@@ -95,7 +95,7 @@ export function StoreReports() {
       if (statusFilter === 'all') return true;
       
       const storeReport = reports.find(r => r.store_id === store.id);
-      return statusFilter === 'completed' ? !!storeReport : !storeReport;
+      return statusFilter === 'completed' ? (storeReport?.completed || false) : !(storeReport?.completed || false);
     })
     .sort((a, b) => {
       const nameA = a.name.toLowerCase();

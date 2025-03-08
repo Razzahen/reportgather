@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getTemplates } from '@/services/templateService';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { assignTemplateToStore } from '@/services/storeService';
 
 interface StoreRowProps {
   store: Store;
@@ -29,7 +30,7 @@ interface StoreRowProps {
 export const StoreRow = ({ store, storeReport, template, onTemplateAssigned }: StoreRowProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isSubmitted = !!storeReport;
+  const isSubmitted = storeReport?.completed || false;
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -56,6 +57,9 @@ export const StoreRow = ({ store, storeReport, template, onTemplateAssigned }: S
     if (isSubmitted) {
       // Navigate to view the existing report
       navigate(`/reports/edit/${storeReport?.id}`);
+    } else if (storeReport && template) {
+      // Navigate to edit existing report
+      navigate(`/reports/edit/${storeReport.id}`);
     } else if (template) {
       // Navigate to create a new report with the assigned template
       navigate(`/reports/${store.id}?templateId=${template.id}`);
@@ -72,9 +76,8 @@ export const StoreRow = ({ store, storeReport, template, onTemplateAssigned }: S
     
     try {
       setIsAssigning(true);
-      // Here we would call a service to assign the template to the store
-      // For now, we're just mocking this behavior with a timeout
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      // Call the service to assign the template to the store
+      await assignTemplateToStore(store.id, selectedTemplate);
       
       toast.success(`Template assigned to ${store.name}`);
       
