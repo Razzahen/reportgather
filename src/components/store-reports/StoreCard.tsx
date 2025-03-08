@@ -77,9 +77,9 @@ export function StoreCard({
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl flex justify-between items-center">
-          <div className="truncate pr-4">{store.name}</div>
-          <Badge variant={storeReport?.completed ? "success" : "secondary"} className="whitespace-nowrap">
+        <CardTitle className="text-lg flex justify-between items-center">
+          <div className="truncate mr-2">{store.name}</div>
+          <Badge variant={storeReport?.completed ? "success" : "secondary"} className="whitespace-nowrap shrink-0">
             {storeReport?.completed ? (
               <><CheckCircle className="mr-1 h-3 w-3" /> Completed</>
             ) : (
@@ -88,15 +88,15 @@ export function StoreCard({
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 flex-grow">
+      <CardContent className="space-y-4 flex-grow pb-4">
         <div className="flex items-center text-sm text-muted-foreground">
-          <Store className="mr-2 h-4 w-4" />
+          <Store className="mr-2 h-4 w-4 shrink-0" />
           <span className="truncate">{store.location}</span>
         </div>
         
         <div className="flex items-center text-sm text-muted-foreground">
-          <Calendar className="mr-2 h-4 w-4" />
-          <span>Manager: {store.manager}</span>
+          <Calendar className="mr-2 h-4 w-4 shrink-0" />
+          <span className="truncate">Manager: {store.manager}</span>
         </div>
         
         {isLoadingTemplates ? (
@@ -107,12 +107,12 @@ export function StoreCard({
             onValueChange={setSelectedTemplateId}
             disabled={assigning}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select template" />
+            <SelectTrigger className="w-full h-9">
+              <SelectValue placeholder="Select template" className="truncate" />
             </SelectTrigger>
             <SelectContent>
               {templates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
+                <SelectItem key={template.id} value={template.id} className="truncate">
                   {template.title}
                 </SelectItem>
               ))}
@@ -120,11 +120,11 @@ export function StoreCard({
           </Select>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
+      <CardFooter className="flex flex-col gap-2 pt-0">
         {template ? (
           <Button 
             variant="outline"
-            className="w-full"
+            className="w-full text-sm"
             onClick={handleAssignTemplate}
             disabled={assigning || !selectedTemplateId}
           >
@@ -133,7 +133,7 @@ export function StoreCard({
         ) : (
           <Button 
             variant="outline" 
-            className="w-full"
+            className="w-full text-sm"
             onClick={handleAssignTemplate}
             disabled={assigning || !selectedTemplateId}
           >
@@ -142,7 +142,7 @@ export function StoreCard({
         )}
         
         <Button 
-          className="w-full"
+          className="w-full text-sm"
           onClick={handleNavigateToForm}
           disabled={!template || isCompletedToday}
           title={isCompletedToday ? "Report already completed for today" : ""}

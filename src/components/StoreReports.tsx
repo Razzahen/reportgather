@@ -178,39 +178,42 @@ export function StoreReports() {
               </TabsContent>
               
               <TabsContent value="list">
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-hidden">
                   <div className="grid grid-cols-12 border-b bg-muted/50 px-4 py-3 text-sm font-medium">
-                    <div className="col-span-12 md:col-span-4">Store</div>
+                    <div className="col-span-4 hidden md:block">Store</div>
                     <div className="hidden md:block md:col-span-2">Manager</div>
                     <div className="hidden md:block md:col-span-2">Template</div>
                     <div className="hidden md:block md:col-span-2">Status</div>
                     <div className="hidden md:block md:col-span-2 text-right">Actions</div>
+                    <div className="col-span-12 md:hidden">Stores</div>
                   </div>
                   
-                  {filteredStores.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-muted-foreground">
-                      No stores match your filter criteria
-                    </div>
-                  ) : (
-                    filteredStores.map((store) => {
-                      const storeReport = reports.find(r => r.store_id === store.id);
-                      const template = storeReport ? 
-                        templates.find(t => t.id === storeReport.template_id) : 
-                        undefined;
-                      
-                      return (
-                        <StoreRow 
-                          key={store.id} 
-                          store={store} 
-                          storeReport={storeReport}
-                          template={template}
-                          templates={templates}
-                          isLoadingTemplates={isLoadingTemplates}
-                          onTemplateAssigned={handleTemplateAssigned}
-                        />
-                      );
-                    })
-                  )}
+                  <div className="max-h-[600px] overflow-y-auto">
+                    {filteredStores.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-muted-foreground">
+                        No stores match your filter criteria
+                      </div>
+                    ) : (
+                      filteredStores.map((store) => {
+                        const storeReport = reports.find(r => r.store_id === store.id);
+                        const template = storeReport ? 
+                          templates.find(t => t.id === storeReport.template_id) : 
+                          undefined;
+                        
+                        return (
+                          <StoreRow 
+                            key={store.id} 
+                            store={store} 
+                            storeReport={storeReport}
+                            template={template}
+                            templates={templates}
+                            isLoadingTemplates={isLoadingTemplates}
+                            onTemplateAssigned={handleTemplateAssigned}
+                          />
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>

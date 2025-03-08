@@ -80,7 +80,7 @@ export function StoreRow({
   const isCompletedToday = isCompleted && reportDateFormatted === todayFormatted;
 
   return (
-    <div className="grid grid-cols-12 border-b px-4 py-3 items-center">
+    <div className="grid grid-cols-12 border-b px-4 py-4 items-center">
       <div className="col-span-12 md:col-span-4 mb-2 md:mb-0">
         <div className="flex flex-col">
           <div className="font-medium truncate">{store.name}</div>
@@ -101,12 +101,12 @@ export function StoreRow({
             onValueChange={setSelectedTemplateId}
             disabled={assigning}
           >
-            <SelectTrigger className="w-[140px] md:w-full text-xs md:text-sm">
+            <SelectTrigger className="w-[140px] md:w-full h-9 text-xs md:text-sm">
               <SelectValue placeholder="Select template" />
             </SelectTrigger>
             <SelectContent>
               {templates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
+                <SelectItem key={template.id} value={template.id} className="truncate">
                   {template.title}
                 </SelectItem>
               ))}
@@ -115,8 +115,8 @@ export function StoreRow({
         )}
       </div>
       
-      <div className="hidden md:block md:col-span-2">
-        <Badge variant={storeReport?.completed ? "success" : "secondary"}>
+      <div className="hidden md:flex md:col-span-2 items-center">
+        <Badge variant={storeReport?.completed ? "success" : "secondary"} className="whitespace-nowrap">
           {storeReport?.completed ? (
             <><CheckCircle className="mr-1 h-3 w-3" /> Completed</>
           ) : (
@@ -125,37 +125,37 @@ export function StoreRow({
         </Badge>
       </div>
       
-      <div className="col-span-5 md:col-span-2 flex justify-end gap-2">
+      <div className="col-span-5 md:col-span-2 flex justify-end gap-2 items-center">
         {template ? (
           <Button 
             size="sm"
             variant="outline"
-            className="text-xs whitespace-nowrap min-w-20"
+            className="text-xs whitespace-nowrap"
             onClick={handleAssignTemplate}
             disabled={assigning || !selectedTemplateId}
           >
-            {assigning ? 'Assigning...' : 'Change Template'}
+            {assigning ? 'Assigning...' : 'Change'}
           </Button>
         ) : (
           <Button 
             size="sm"
             variant="outline" 
-            className="text-xs whitespace-nowrap min-w-20"
+            className="text-xs whitespace-nowrap"
             onClick={handleAssignTemplate}
             disabled={assigning || !selectedTemplateId}
           >
-            {assigning ? 'Assigning...' : 'Assign Template'}
+            {assigning ? 'Assigning...' : 'Assign'}
           </Button>
         )}
         
         <Button 
           size="sm" 
-          className="text-xs whitespace-nowrap min-w-20"
+          className="text-xs whitespace-nowrap"
           onClick={handleNavigateToForm}
           disabled={!template || isCompletedToday}
           title={isCompletedToday ? "Report already completed for today" : ""}
         >
-          {isCompletedToday ? "Completed" : "Complete Form"}
+          {isCompletedToday ? "Done" : "Complete"}
         </Button>
       </div>
     </div>
