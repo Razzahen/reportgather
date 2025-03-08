@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus, Store as StoreIcon, Search, MapPin, User, Edit, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,11 +10,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Store } from '@/types/supabase';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Store, Template } from '@/types/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStores, createStore, updateStore, deleteStore } from '@/services/storeService';
+import { getTemplates } from '@/services/templateService';
 import { toast } from 'sonner';
 
 export function Stores() {
@@ -24,6 +25,9 @@ export function Stores() {
   const [isEditStoreOpen, setIsEditStoreOpen] = useState(false);
   const [newStore, setNewStore] = useState({ name: '', location: '', manager: '' });
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [storeForReport, setStoreForReport] = useState<Store | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
@@ -31,6 +35,12 @@ export function Stores() {
   const { data: stores = [], isLoading } = useQuery({
     queryKey: ['stores'],
     queryFn: getStores
+  });
+  
+  // Fetch templates
+  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ['templates'],
+    queryFn: getTemplates
   });
   
   // Create store mutation
@@ -103,6 +113,29 @@ export function Stores() {
     if (window.confirm("Are you sure you want to delete this store?")) {
       deleteMutation.mutate(id);
     }
+  };
+  
+  // Handle creating a report with template selection
+  const handleCreateReport = (store: Store) => {
+    if (templates.length === 0) {
+      toast.error("No templates available. Please create a template first.");
+      return;
+    }
+    
+    setStoreForReport(store);
+    setSelectedTemplate(null);
+    setShowTemplateDialog(true);
+  };
+  
+  const handleTemplateSelect = () => {
+    if (!selectedTemplate || !storeForReport) {
+      toast.error("Please select a template to continue");
+      return;
+    }
+    
+    navigate(`/reports/${storeForReport.id}?templateId=${selectedTemplate}`);
+    setShowTemplateDialog(false);
+    setStoreForReport(null);
   };
   
   // Filter stores based on search term
@@ -260,14 +293,12 @@ export function Stores() {
                 </div>
                 <div className="mt-4 pt-4 border-t flex justify-between">
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/reports/${store.id}`}>
+                    <Link to={`/reports`}>
                       View Reports
                     </Link>
                   </Button>
-                  <Button size="sm" variant="default" asChild>
-                    <Link to={`/reports/${store.id}/new`}>
-                      Create Report
-                    </Link>
+                  <Button size="sm" variant="default" onClick={() => handleCreateReport(store)}>
+                    Create Report
                   </Button>
                 </div>
               </CardContent>
@@ -324,6 +355,66 @@ export function Stores() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Template Selection Dialog */}
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Template</DialogTitle>
+            <DialogDescription>
+              Choose a template for creating a report for {storeForReport?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoadingTemplates ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              No templates available. Please create a template first.
+            </div>
+          ) : (
+            <RadioGroup value={selectedTemplate || ''} onValueChange={setSelectedTemplate}>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {templates.map(template => (
+                  <div 
+                    key={template.id} 
+                    className="flex items-start space-x-2 p-3 rounded-md border cursor-pointer hover:bg-muted transition-colors"
+                    onClick={() => setSelectedTemplate(template.id)}
+                  >
+                    <RadioGroupItem value={template.id} id={`store-${template.id}`} className="mt-1" />
+                    <div className="flex-1">
+                      <Label 
+                        htmlFor={`store-${template.id}`} 
+                        className="font-medium cursor-pointer"
+                      >
+                        {template.title}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {template.questions?.length || 0} questions
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </RadioGroup>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleTemplateSelect} 
+              disabled={!selectedTemplate || isLoadingTemplates}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

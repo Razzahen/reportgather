@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Save, Loader } from 'lucide-react';
@@ -19,65 +18,66 @@ import { Question, Report, ReportAnswer } from '@/types/supabase';
 const ReportForm: React.FC = () => {
   const { storeId = '', reportId = '' } = useParams<{ storeId: string; reportId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   
-  // State variables
+  const queryParams = new URLSearchParams(location.search);
+  const templateIdFromUrl = queryParams.get('templateId');
+  
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(templateIdFromUrl);
   
-  // Fetch store data
   const { data: store, isLoading: isLoadingStore } = useQuery({
     queryKey: ['store', storeId],
     queryFn: () => getStore(storeId),
     enabled: !!storeId,
   });
 
-  // Fetch existing report if we have a reportId
   const { data: existingReport, isLoading: isLoadingReport } = useQuery({
     queryKey: ['report', reportId],
     queryFn: () => getReportById(reportId),
     enabled: !!reportId,
   });
 
-  // Set up the answers and selected template when the existing report loads
   useEffect(() => {
     if (existingReport) {
-      // Pre-populate answers from existing report
       const answerMap: Record<string, any> = {};
       existingReport.answers?.forEach(answer => {
         answerMap[answer.question_id] = answer.value;
       });
       setAnswers(answerMap);
       
-      // Set the selected template
       if (existingReport.template_id) {
         setSelectedTemplate(existingReport.template_id);
       }
     }
   }, [existingReport]);
 
-  // Fetch templates
   const { data: template, isLoading: isLoadingTemplate } = useQuery({
     queryKey: ['template', selectedTemplate],
     queryFn: () => selectedTemplate ? getTemplateById(selectedTemplate) : null,
     enabled: !!selectedTemplate
   });
 
-  // Initialize selectedTemplate from existing report
   useEffect(() => {
     if (existingReport?.template_id && !selectedTemplate) {
       setSelectedTemplate(existingReport.template_id);
     }
   }, [existingReport, selectedTemplate]);
 
-  // Sort questions by order_index
+  useEffect(() => {
+    if (!isLoadingReport && !isLoadingStore && !reportId && !selectedTemplate) {
+      toast.error("No template selected. Please select a template first.");
+      navigate('/reports');
+    }
+  }, [isLoadingReport, isLoadingStore, reportId, selectedTemplate, navigate]);
+
   const sortedQuestions = template?.questions?.sort((a, b) => 
     (a.order_index || 0) - (b.order_index || 0)
   ) || [];
 
-  // Create report mutation
   const createReportMutation = useMutation({
     mutationFn: async () => {
       setIsSubmitting(true);
@@ -115,7 +115,6 @@ const ReportForm: React.FC = () => {
     }
   });
 
-  // Update report mutation
   const updateReportMutation = useMutation({
     mutationFn: async () => {
       setIsSubmitting(true);
@@ -160,7 +159,6 @@ const ReportForm: React.FC = () => {
     if (currentQuestionIndex < sortedQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // At the end of questions, prompt to submit
       handleSubmit();
     }
   };
@@ -172,7 +170,6 @@ const ReportForm: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // Check if all required questions are answered
     const unansweredRequired = sortedQuestions
       .filter(q => q.required)
       .filter(q => !answers[q.id]);
@@ -189,7 +186,6 @@ const ReportForm: React.FC = () => {
     }
   };
 
-  // When a user clicks on a completed question, jump to it
   const handleSelectQuestion = (index: number) => {
     setCurrentQuestionIndex(index);
   };
@@ -228,10 +224,17 @@ const ReportForm: React.FC = () => {
   }
 
   if (!template) {
-    return null;
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold">No template selected</h2>
+        <p className="text-muted-foreground mt-2">Please select a template to create a report</p>
+        <Button className="mt-4" onClick={() => navigate('/reports')}>
+          Back to Reports
+        </Button>
+      </div>
+    );
   }
 
-  // Render individual question component based on question type
   const renderQuestionInput = (question: Question) => {
     const value = answers[question.id] || '';
     
@@ -322,7 +325,6 @@ const ReportForm: React.FC = () => {
         </CardHeader>
         
         <CardContent className="space-y-8">
-          {/* Previously answered questions */}
           {currentQuestionIndex > 0 && (
             <ScrollArea className="h-[250px] pr-4 border p-4 rounded-md">
               <AnimatePresence>
@@ -363,7 +365,6 @@ const ReportForm: React.FC = () => {
             </ScrollArea>
           )}
           
-          {/* Current question */}
           <AnimatePresence mode="wait">
             {sortedQuestions.length > 0 && (
               <motion.div
