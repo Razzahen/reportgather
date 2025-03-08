@@ -30,7 +30,7 @@ const Index = () => {
         )}
       >
         <Navbar />
-        <main className="container mx-auto px-4 py-8 pt-32">
+        <main className="container mx-auto px-4 py-4 pt-20">
           <ErrorBoundary>
             <CEODashboard />
           </ErrorBoundary>

@@ -9,7 +9,7 @@ import PendingReportsCard from './PendingReportsCard';
 
 export function CEODashboard() {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-6 md:p-8">
         <div className="max-w-3xl">
