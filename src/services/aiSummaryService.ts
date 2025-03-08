@@ -29,19 +29,34 @@ export const generateAISummary = async (
     const reportData = reports.map(report => {
       // Extract relevant information from each report
       const answers = report.answers?.map(answer => ({
-        question: answer.question?.text,
+        question: answer.question?.text || 'Unknown question',
+        question_type: answer.question?.type || 'text',
         answer: answer.value,
       })) || [];
       
       return {
         id: report.id,
         store_id: report.store_id,
-        store_name: report.store?.name,
+        store_name: report.store?.name || 'Unknown store',
         submitted_at: report.submitted_at,
-        template_name: report.template?.title,
-        answers: answers
+        template_name: report.template?.title || 'Unknown template',
+        answers: answers,
+        completed: report.completed
       };
     });
+    
+    // Add some basic analytics to help the AI
+    const reportAnalytics = {
+      totalReports: reports.length,
+      completedReports: reports.filter(r => r.completed).length,
+      storesWithReports: [...new Set(reports.map(r => r.store_id))].length,
+      reportsByStore: Object.fromEntries(
+        stores.map(store => [
+          store.name,
+          reports.filter(r => r.store_id === store.id).length
+        ])
+      )
+    };
     
     // Call our Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('ai-summary', {
@@ -49,6 +64,7 @@ export const generateAISummary = async (
         messages,
         storeData,
         reportData,
+        reportAnalytics,
         mode
       }
     });

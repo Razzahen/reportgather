@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, storeData, reportData, mode } = await req.json();
+    const { messages, storeData, reportData, reportAnalytics, mode } = await req.json();
     
     // Initialize OpenAI client
     const openai = new OpenAI({
@@ -32,7 +32,9 @@ serve(async (req) => {
         4. Provide actionable insights backed by specific store data
         
         Always cite your sources by mentioning store names and dates when providing insights.
-        Be concise, professional, and focus on the most important information.`;
+        Be concise, professional, and focus on the most important information.
+        
+        If there are no report answers available, clearly state this in your response.`;
     } else if (mode === 'chat') {
       systemMessage = `You are an AI retail analyst assistant helping with store report queries.
         You have access to report data from stores. When answering questions:
@@ -41,17 +43,54 @@ serve(async (req) => {
         3. If you don't have enough information, politely say so
         4. Keep answers concise and professional
         
-        Always back your statements with evidence from the reports.`;
+        Always back your statements with evidence from the reports.
+        If there are no report answers available, clearly state this in your response.`;
     }
     
     // Prepare context information for the AI
+    const reportSummary = reportData.length > 0 
+      ? reportData.map(report => {
+          const answersText = report.answers && report.answers.length > 0
+            ? report.answers.map(a => `- ${a.question}: ${a.answer}`).join("\n")
+            : "No answers recorded in this report.";
+            
+          return `
+REPORT: ${report.store_name} (${new Date(report.submitted_at).toISOString().split('T')[0]})
+Template: ${report.template_name}
+Status: ${report.completed ? 'Completed' : 'Incomplete'}
+Answers:
+${answersText}
+`;
+        }).join("\n\n")
+      : "No reports available for the selected period.";
+    
+    const storesContext = storeData.length > 0
+      ? `STORE INFORMATION:\n${storeData.map(store => 
+          `- ${store.name}: Located at ${store.location}, managed by ${store.manager}`
+        ).join('\n')}`
+      : "No store information available.";
+    
+    const analyticsContext = reportAnalytics 
+      ? `
+REPORT ANALYTICS:
+- Total Reports: ${reportAnalytics.totalReports}
+- Completed Reports: ${reportAnalytics.completedReports}
+- Stores with Reports: ${reportAnalytics.storesWithReports}
+- Reports by Store: ${Object.entries(reportAnalytics.reportsByStore).map(([store, count]) => `${store}: ${count}`).join(', ')}
+`
+      : "";
+    
     const contextMessage = `
-      STORE INFORMATION:
-      ${JSON.stringify(storeData)}
-      
-      REPORT INFORMATION:
-      ${JSON.stringify(reportData)}
-    `;
+${storesContext}
+
+${analyticsContext}
+
+REPORT DETAILS:
+${reportSummary}
+`;
+    
+    console.log("Context for OpenAI:");
+    console.log(contextMessage);
     
     const completeMessages = [
       { role: "system", content: systemMessage },
