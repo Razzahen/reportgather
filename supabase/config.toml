@@ -1,1 +1,35 @@
+
 project_id = "itmbmcdkpzfvvjdmqtnq"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+
+[storage]
+enabled = true
+
+[edges]
+enabled = true
+
+[[functions]]
+name = "ai-summary"
+verify_jwt = true

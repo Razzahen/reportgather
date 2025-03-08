@@ -1,288 +1,154 @@
 
-import { BarChart3, Calendar, Download, Lightbulb, Store, TrendingUp, ShoppingBag, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockSummary, mockStores, mockReports } from '@/utils/mockData';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getReports } from '@/services/reportService';
+import { getStores } from '@/services/storeService';
+import { ChatInterface } from './AI/ChatInterface';
+import { SummaryFilters } from './AI/SummaryFilters';
+import { StoreFilter } from '@/types/chat';
+import { subDays } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export function ReportSummary() {
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    }).format(date);
+const ReportSummary = () => {
+  // Get current date and 7 days ago for default filter
+  const today = new Date();
+  const sevenDaysAgo = subDays(today, 7);
+  
+  // State for filters
+  const [filter, setFilter] = useState<StoreFilter>({
+    storeIds: 'all',
+    dateRange: {
+      from: sevenDaysAgo,
+      to: today,
+    },
+  });
+  
+  // State to track when to generate a new summary
+  const [shouldGenerateSummary, setShouldGenerateSummary] = useState(false);
+  const [summaryPrompt, setSummaryPrompt] = useState<string>('');
+  
+  // Fetch stores and reports
+  const { data: stores = [], isLoading: storesLoading, error: storesError } = useQuery({
+    queryKey: ['stores'],
+    queryFn: getStores,
+  });
+  
+  const { data: allReports = [], isLoading: reportsLoading, error: reportsError } = useQuery({
+    queryKey: ['reports'],
+    queryFn: getReports,
+  });
+  
+  // Filter reports based on selected stores and date range
+  const filteredReports = allReports.filter(report => {
+    const reportDate = new Date(report.submitted_at);
+    const isInDateRange = reportDate >= filter.dateRange.from && reportDate <= filter.dateRange.to;
+    
+    const isSelectedStore = 
+      filter.storeIds === 'all' || 
+      (Array.isArray(filter.storeIds) && filter.storeIds.includes(report.store_id));
+    
+    return isInDateRange && isSelectedStore;
+  });
+  
+  // Generate summary when filters are applied
+  useEffect(() => {
+    if (shouldGenerateSummary) {
+      // Create prompt based on filter selection
+      const storeNames = filter.storeIds === 'all'
+        ? 'all stores'
+        : stores
+            .filter(store => (filter.storeIds as string[]).includes(store.id))
+            .map(store => store.name)
+            .join(', ');
+      
+      const fromDate = filter.dateRange.from.toLocaleDateString();
+      const toDate = filter.dateRange.to.toLocaleDateString();
+      
+      const prompt = `Please analyze the reports from ${storeNames} between ${fromDate} and ${toDate}. 
+        Provide a summary of key insights, trends, and notable issues. 
+        Focus on patterns across multiple stores if applicable, and highlight any critical information.`;
+      
+      setSummaryPrompt(prompt);
+      setShouldGenerateSummary(false);
+    }
+  }, [shouldGenerateSummary, filter, stores]);
+  
+  // Handle filter application
+  const handleApplyFilters = () => {
+    setShouldGenerateSummary(true);
   };
   
-  // Mock sales data for chart
-  const salesData = [
-    { store: 'Downtown', sales: 8750 },
-    { store: 'Westfield', sales: 12350 },
-    { store: 'River Park', sales: 9200 },
-    { store: 'Eastside', sales: 7300 },
-    { store: 'Northern', sales: 11100 },
-  ];
-
+  const isLoading = storesLoading || reportsLoading;
+  const hasError = storesError || reportsError;
+  
+  if (hasError) {
+    return (
+      <Alert variant="destructive" className="my-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Failed to load data. Please try refreshing the page or contact support.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="chip bg-primary/10 text-primary mb-2">AI Analysis</div>
-          <h1 className="text-3xl font-semibold tracking-tight">Report Summary</h1>
-          <p className="text-muted-foreground">
-            AI-generated summary and insights for {formatDate(mockSummary.date)}
-          </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight mb-2">Report Summaries</h1>
+        <p className="text-muted-foreground">
+          Get AI-powered insights from your store reports
+        </p>
+      </div>
+      
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-[100px] w-full rounded-md" />
+          <Skeleton className="h-[500px] w-full rounded-md" />
         </div>
-        <Button variant="outline">
-          <Download size={16} className="mr-2" />
-          Export
-        </Button>
-      </div>
-      
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-white to-secondary/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Reports Submitted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div className="text-2xl font-semibold">
-                {mockSummary.reportsSubmitted}/{mockSummary.totalStores}
-              </div>
-              <Store className="text-primary h-8 w-8 opacity-70" />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              {(mockSummary.reportsSubmitted / mockSummary.totalStores * 100).toFixed(0)}% completion rate
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-white to-secondary/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Average Sales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div className="text-2xl font-semibold">${mockSummary.averageSales.toLocaleString()}</div>
-              <ShoppingBag className="text-primary h-8 w-8 opacity-70" />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              +12% from previous day
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-white to-secondary/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Top Performing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div className="text-2xl font-semibold truncate pr-2">
-                {mockSummary.topPerformingStore}
-              </div>
-              <TrendingUp className="text-primary h-8 w-8 opacity-70" />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              $12,350 in sales
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-white to-secondary/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Key Insights</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div className="text-2xl font-semibold">{mockSummary.keyTrends.length}</div>
-              <Lightbulb className="text-primary h-8 w-8 opacity-70" />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              3 actionable recommendations
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="trends" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="trends">Key Trends</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-          <TabsTrigger value="data">Data Visualization</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="trends" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Key Trends and Insights
-              </CardTitle>
-              <CardDescription>
-                AI-generated analysis based on all store reports
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-4">
-                {mockSummary.keyTrends.map((trend, index) => (
-                  <li key={index} className="flex space-x-3">
-                    <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-base font-medium">{trend}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Identified in {Math.floor(Math.random() * 3) + 2} store reports
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+      ) : (
+        <>
+          <SummaryFilters 
+            stores={stores} 
+            filter={filter} 
+            onFilterChange={setFilter} 
+            onApplyFilters={handleApplyFilters}
+          />
           
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
-                Performance Outliers
-              </CardTitle>
-              <CardDescription>
-                Stores with significantly higher or lower performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 rounded-md bg-green-50 border border-green-100">
-                  <h3 className="font-medium text-green-800 flex items-center">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Top Performer: {mockSummary.topPerformingStore}
-                  </h3>
-                  <p className="text-sm text-green-700 mt-1">
-                    Outperformed average by 17% with strong sales in premium categories.
-                    Customer satisfaction was particularly high, with zero complaints reported.
+          {filteredReports.length === 0 ? (
+            <Alert className="my-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>No reports found</AlertTitle>
+              <AlertDescription>
+                No reports were found for the selected filters. Try selecting a different date range or stores.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              {summaryPrompt ? (
+                <ChatInterface 
+                  stores={stores}
+                  reports={filteredReports}
+                  storeFilter={filter}
+                  initialMessage={summaryPrompt}
+                />
+              ) : (
+                <div className="text-center p-12 bg-muted rounded-lg">
+                  <h3 className="text-lg font-medium mb-2">Select Filters to Generate Summary</h3>
+                  <p className="text-muted-foreground">
+                    Use the filters above to select stores and date range, then click "Apply Filters" to generate an AI summary.
                   </p>
                 </div>
-                
-                <div className="p-4 rounded-md bg-amber-50 border border-amber-100">
-                  <h3 className="font-medium text-amber-800 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Needs Attention: Eastside Plaza
-                  </h3>
-                  <p className="text-sm text-amber-700 mt-1">
-                    Underperformed by 12% compared to average. Staff shortages and inventory issues
-                    were reported as contributing factors.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="recommendations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Lightbulb className="h-5 w-5 mr-2" />
-                AI Recommendations
-              </CardTitle>
-              <CardDescription>
-                Strategic suggestions based on today's report data
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-6">
-                {mockSummary.recommendations.map((recommendation, index) => (
-                  <li key={index} className="flex gap-4">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-base font-medium">{recommendation}</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        This recommendation is based on {Math.floor(Math.random() * 3) + 1} trends 
-                        identified across multiple store reports, with a {70 + Math.floor(Math.random() * 25)}% 
-                        confidence level.
-                      </p>
-                      <div className="flex gap-2 mt-3">
-                        <Button variant="outline" size="sm">Implement</Button>
-                        <Button variant="ghost" size="sm">Dismiss</Button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="data" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
-                Sales Performance by Store
-              </CardTitle>
-              <CardDescription>
-                Comparative view of today's sales data
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="store" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Historical Context
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Today's average sales of ${mockSummary.averageSales.toLocaleString()} represent 
-                  a 12% increase compared to the same day last week, and a 5% increase compared 
-                  to the monthly average. This suggests a positive sales trend heading into the 
-                  weekend.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Predictive Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Based on current trends, sales are expected to increase by 15-20% over the 
-                  weekend, with the strongest performance anticipated at Westfield Mall and 
-                  Northern Heights locations. Consider increasing staff at these locations.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   );
-}
+};
 
 export default ReportSummary;
