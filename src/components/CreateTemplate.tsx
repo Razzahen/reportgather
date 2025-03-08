@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Question } from '@/types/supabase';
 import { createTemplate } from '@/services/templateService';
 import { toast } from 'sonner';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface QuestionInput {
   id: string;
@@ -24,6 +24,7 @@ interface QuestionInput {
 
 export function CreateTemplate() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [questions, setQuestions] = useState<QuestionInput[]>([
@@ -51,7 +52,8 @@ export function CreateTemplate() {
 
       return await createTemplate(templateData, questionsData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
       toast.success("Template created successfully!");
       navigate('/templates');
     },
