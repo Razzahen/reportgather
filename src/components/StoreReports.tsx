@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -29,38 +30,50 @@ export function StoreReports() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   // Fetch data from Supabase
-  const { data: stores = [], isLoading: isLoadingStores } = useQuery({
+  const { 
+    data: stores = [], 
+    isLoading: isLoadingStores,
+    error: storesError
+  } = useQuery({
     queryKey: ['stores'],
-    queryFn: getStores,
-    onSettled: (data, error) => {
-      if (error) {
-        console.error('Error fetching stores:', error);
-        toast.error('Failed to load stores');
-      }
-    }
+    queryFn: getStores
   });
   
-  const { data: reports = [], isLoading: isLoadingReports } = useQuery({
+  const { 
+    data: reports = [], 
+    isLoading: isLoadingReports,
+    error: reportsError 
+  } = useQuery({
     queryKey: ['reports'],
-    queryFn: getReports,
-    onSettled: (data, error) => {
-      if (error) {
-        console.error('Error fetching reports:', error);
-        toast.error('Failed to load reports');
-      }
-    }
+    queryFn: getReports
   });
   
-  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
+  const { 
+    data: templates = [], 
+    isLoading: isLoadingTemplates,
+    error: templatesError
+  } = useQuery({
     queryKey: ['templates'],
-    queryFn: getTemplates,
-    onSettled: (data, error) => {
-      if (error) {
-        console.error('Error fetching templates:', error);
-        toast.error('Failed to load templates');
-      }
-    }
+    queryFn: getTemplates
   });
+  
+  // Handle errors with useEffect
+  useEffect(() => {
+    if (storesError) {
+      console.error('Error fetching stores:', storesError);
+      toast.error('Failed to load stores');
+    }
+    
+    if (reportsError) {
+      console.error('Error fetching reports:', reportsError);
+      toast.error('Failed to load reports');
+    }
+    
+    if (templatesError) {
+      console.error('Error fetching templates:', templatesError);
+      toast.error('Failed to load templates');
+    }
+  }, [storesError, reportsError, templatesError]);
   
   // Format date for display
   const formatDate = (date: string) => {
