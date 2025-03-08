@@ -3,17 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, CheckCircle, Save, Edit, Loader } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Save, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { getTemplateById } from '@/services/templateService';
 import { getStore } from '@/services/storeService';
 import { getReportById, createReport, updateReport } from '@/services/reportService';
 import { toast } from 'sonner';
-import { Store, Template, Question, Report, ReportAnswer } from '@/types/supabase';
+import { Question, Report, ReportAnswer } from '@/types/supabase';
 
 const ReportForm: React.FC = () => {
   const { storeId = '', reportId = '' } = useParams<{ storeId: string; reportId: string }>();
@@ -23,7 +24,6 @@ const ReportForm: React.FC = () => {
   // State variables
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   
@@ -39,22 +39,24 @@ const ReportForm: React.FC = () => {
     queryKey: ['report', reportId],
     queryFn: () => getReportById(reportId),
     enabled: !!reportId,
-    onSuccess: (data) => {
-      if (data) {
-        // Pre-populate answers from existing report
-        const answerMap: Record<string, any> = {};
-        data.answers?.forEach(answer => {
-          answerMap[answer.question_id] = answer.value;
-        });
-        setAnswers(answerMap);
-        
-        // Set the selected template
-        if (data.template_id) {
-          setSelectedTemplate(data.template_id);
-        }
+  });
+
+  // Set up the answers and selected template when the existing report loads
+  useEffect(() => {
+    if (existingReport) {
+      // Pre-populate answers from existing report
+      const answerMap: Record<string, any> = {};
+      existingReport.answers?.forEach(answer => {
+        answerMap[answer.question_id] = answer.value;
+      });
+      setAnswers(answerMap);
+      
+      // Set the selected template
+      if (existingReport.template_id) {
+        setSelectedTemplate(existingReport.template_id);
       }
     }
-  });
+  }, [existingReport]);
 
   // Fetch templates
   const { data: template, isLoading: isLoadingTemplate } = useQuery({
@@ -158,7 +160,8 @@ const ReportForm: React.FC = () => {
     if (currentQuestionIndex < sortedQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      setIsEditing(true);
+      // At the end of questions, prompt to submit
+      handleSubmit();
     }
   };
 
@@ -184,6 +187,11 @@ const ReportForm: React.FC = () => {
     } else {
       createReportMutation.mutate();
     }
+  };
+
+  // When a user clicks on a completed question, jump to it
+  const handleSelectQuestion = (index: number) => {
+    setCurrentQuestionIndex(index);
   };
 
   if (isLoadingStore || isLoadingReport || (selectedTemplate && isLoadingTemplate)) {
@@ -219,12 +227,7 @@ const ReportForm: React.FC = () => {
     );
   }
 
-  if (!selectedTemplate && existingReport?.template) {
-    setSelectedTemplate(existingReport.template.id);
-  }
-
   if (!template) {
-    // This should never happen with the guards above, but TypeScript needs it
     return null;
   }
 
@@ -312,132 +315,105 @@ const ReportForm: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>{template.title}</span>
-            {isEditing ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(false)}
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Guided Mode
-              </Button>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Question {currentQuestionIndex + 1} of {sortedQuestions.length}
-              </div>
-            )}
+            <div className="text-sm text-muted-foreground">
+              Question {currentQuestionIndex + 1} of {sortedQuestions.length}
+            </div>
           </CardTitle>
         </CardHeader>
         
-        <CardContent>
-          {isEditing ? (
-            // Edit mode - show all questions
-            <div className="space-y-8">
+        <CardContent className="space-y-8">
+          {/* Previously answered questions */}
+          {currentQuestionIndex > 0 && (
+            <ScrollArea className="h-[250px] pr-4 border p-4 rounded-md">
               <AnimatePresence>
-                {sortedQuestions.map((question, index) => (
+                {sortedQuestions.slice(0, currentQuestionIndex).map((question, index) => (
                   <motion.div
                     key={question.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="space-y-2"
+                    transition={{ duration: 0.3 }}
+                    className="border-b pb-4 mb-4 last:border-0"
+                    onClick={() => handleSelectQuestion(index)}
                   >
                     <div className="flex items-start">
-                      <div className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs mr-2 mt-1">
-                        {index + 1}
-                      </div>
                       <div className="flex-1">
-                        <Label htmlFor={question.id} className="text-base font-medium">
-                          {question.text}
-                          {question.required && <span className="text-destructive ml-1">*</span>}
-                        </Label>
-                        <div className="mt-2">
-                          {renderQuestionInput(question)}
+                        <div className="flex items-center mb-2">
+                          <div className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center mr-2">
+                            {index + 1}
+                          </div>
+                          <Label className="font-medium cursor-pointer hover:text-primary">
+                            {question.text}
+                            {question.required && <span className="text-destructive ml-1">*</span>}
+                          </Label>
+                        </div>
+                        <div className="pl-7">
+                          {answers[question.id] ? (
+                            <div className="text-sm italic text-muted-foreground">
+                              {typeof answers[question.id] === 'string' ? answers[question.id] : JSON.stringify(answers[question.id])}
+                            </div>
+                          ) : (
+                            <div className="text-sm italic text-destructive">No answer provided</div>
+                          )}
                         </div>
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
-            </div>
-          ) : (
-            // Guided mode - show one question at a time
-            <AnimatePresence mode="wait">
-              {sortedQuestions.length > 0 && (
-                <motion.div
-                  key={sortedQuestions[currentQuestionIndex]?.id || 'empty'}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor={sortedQuestions[currentQuestionIndex]?.id} className="text-lg font-medium">
-                      {sortedQuestions[currentQuestionIndex]?.text}
-                      {sortedQuestions[currentQuestionIndex]?.required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <div className="mt-2">
-                      {renderQuestionInput(sortedQuestions[currentQuestionIndex])}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
-        </CardContent>
-        
-        <CardFooter className={`flex ${isEditing ? 'justify-end' : 'justify-between'}`}>
-          {!isEditing && (
-            <>
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Previous
-              </Button>
-              
-              <Button
-                onClick={handleNext}
-                disabled={sortedQuestions[currentQuestionIndex]?.required && !answers[sortedQuestions[currentQuestionIndex]?.id]}
-              >
-                {currentQuestionIndex < sortedQuestions.length - 1 ? (
-                  <>
-                    Next
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </>
-                ) : (
-                  <>
-                    Review All
-                    <CheckCircle className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            </>
+            </ScrollArea>
           )}
           
-          {isEditing && (
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="min-w-[120px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin mr-2" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  {existingReport ? 'Update Report' : 'Submit Report'}
-                </>
-              )}
-            </Button>
-          )}
+          {/* Current question */}
+          <AnimatePresence mode="wait">
+            {sortedQuestions.length > 0 && (
+              <motion.div
+                key={sortedQuestions[currentQuestionIndex]?.id || 'empty'}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor={sortedQuestions[currentQuestionIndex]?.id} className="text-lg font-medium">
+                    {sortedQuestions[currentQuestionIndex]?.text}
+                    {sortedQuestions[currentQuestionIndex]?.required && <span className="text-destructive ml-1">*</span>}
+                  </Label>
+                  <div className="mt-2">
+                    {renderQuestionInput(sortedQuestions[currentQuestionIndex])}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+        
+        <CardFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          
+          <Button
+            onClick={handleNext}
+            disabled={sortedQuestions[currentQuestionIndex]?.required && !answers[sortedQuestions[currentQuestionIndex]?.id]}
+          >
+            {currentQuestionIndex < sortedQuestions.length - 1 ? (
+              <>
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Submit
+                <Save className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
         </CardFooter>
       </Card>
     </div>
