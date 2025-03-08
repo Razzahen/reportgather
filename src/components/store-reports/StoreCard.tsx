@@ -69,6 +69,11 @@ export function StoreCard({
     }
   };
 
+  const isCompleted = storeReport?.completed === true;
+  const todayFormatted = new Date().toISOString().split('T')[0];
+  const reportDateFormatted = storeReport?.submitted_at ? new Date(storeReport.submitted_at).toISOString().split('T')[0] : null;
+  const isCompletedToday = isCompleted && reportDateFormatted === todayFormatted;
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
@@ -139,9 +144,10 @@ export function StoreCard({
         <Button 
           className="w-full"
           onClick={handleNavigateToForm}
-          disabled={!template}
+          disabled={!template || isCompletedToday}
+          title={isCompletedToday ? "Report already completed for today" : ""}
         >
-          Complete Form
+          {isCompletedToday ? "Completed Today" : "Complete Form"}
         </Button>
       </CardFooter>
     </Card>

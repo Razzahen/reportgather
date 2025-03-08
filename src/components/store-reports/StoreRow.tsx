@@ -74,6 +74,11 @@ export function StoreRow({
     }
   };
 
+  const isCompleted = storeReport?.completed === true;
+  const todayFormatted = new Date().toISOString().split('T')[0];
+  const reportDateFormatted = storeReport?.submitted_at ? new Date(storeReport.submitted_at).toISOString().split('T')[0] : null;
+  const isCompletedToday = isCompleted && reportDateFormatted === todayFormatted;
+
   return (
     <div className="grid grid-cols-12 border-b px-4 py-3 items-center">
       <div className="col-span-12 md:col-span-4 mb-2 md:mb-0">
@@ -147,9 +152,10 @@ export function StoreRow({
           size="sm" 
           className="text-xs whitespace-nowrap min-w-20"
           onClick={handleNavigateToForm}
-          disabled={!template}
+          disabled={!template || isCompletedToday}
+          title={isCompletedToday ? "Report already completed for today" : ""}
         >
-          Complete Form
+          {isCompletedToday ? "Completed" : "Complete Form"}
         </Button>
       </div>
     </div>
