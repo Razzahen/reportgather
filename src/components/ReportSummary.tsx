@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getReports } from '@/services/reportService';
@@ -29,7 +28,7 @@ const ReportSummary = () => {
   const [shouldGenerateSummary, setShouldGenerateSummary] = useState(false);
   const [summaryPrompt, setSummaryPrompt] = useState<string>('');
   
-  // Fetch stores and reports
+  // Fetch stores and reports with full details
   const { data: stores = [], isLoading: storesLoading, error: storesError } = useQuery({
     queryKey: ['stores'],
     queryFn: getStores,
@@ -37,7 +36,22 @@ const ReportSummary = () => {
   
   const { data: allReports = [], isLoading: reportsLoading, error: reportsError } = useQuery({
     queryKey: ['reports'],
-    queryFn: getReports,
+    queryFn: async () => {
+      // Fetch all reports first
+      const reports = await getReports();
+      
+      // Log the reports for debugging
+      console.log('Fetched reports:', reports);
+      
+      // Check if reports have answers
+      const hasAnswers = reports.some(report => 
+        report.answers && Array.isArray(report.answers) && report.answers.length > 0
+      );
+      
+      console.log('Reports have answers:', hasAnswers);
+      
+      return reports;
+    },
   });
   
   // Filter reports based on selected stores and date range
@@ -66,9 +80,11 @@ const ReportSummary = () => {
       const fromDate = filter.dateRange.from.toLocaleDateString();
       const toDate = filter.dateRange.to.toLocaleDateString();
       
+      // Add detail about the expected output format
       const prompt = `Please analyze the reports from ${storeNames} between ${fromDate} and ${toDate}. 
         Provide a summary of key insights, trends, and notable issues. 
-        Focus on patterns across multiple stores if applicable, and highlight any critical information.`;
+        Focus on patterns across multiple stores if applicable, and highlight any critical information.
+        If there are no answers in the reports, please clearly indicate this in your response.`;
       
       setSummaryPrompt(prompt);
       setShouldGenerateSummary(false);

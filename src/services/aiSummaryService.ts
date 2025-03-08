@@ -26,13 +26,41 @@ export const generateAISummary = async (
       manager: store.manager
     }));
     
+    // Enhanced extraction of report data with special attention to answers
     const reportData = reports.map(report => {
-      // Extract relevant information from each report
-      const answers = report.answers?.map(answer => ({
-        question: answer.question?.text || 'Unknown question',
-        question_type: answer.question?.type || 'text',
-        answer: answer.value,
-      })) || [];
+      // Extract relevant information from each report, carefully handling answers
+      let answers = [];
+      
+      // Only process answers if they exist and are not empty
+      if (report.answers && Array.isArray(report.answers) && report.answers.length > 0) {
+        answers = report.answers.map(answer => {
+          // Ensure we have valid question data
+          const questionText = answer.question?.text || 'Unknown question';
+          const questionType = answer.question?.type || 'text';
+          
+          // Format the answer value based on its type for better readability
+          let formattedValue = answer.value;
+          
+          // If the value is undefined or null, provide a placeholder
+          if (formattedValue === undefined || formattedValue === null) {
+            formattedValue = 'No answer provided';
+          }
+          
+          // If it's an object or array, stringify it for clarity
+          if (typeof formattedValue === 'object') {
+            formattedValue = JSON.stringify(formattedValue);
+          }
+          
+          return {
+            question: questionText,
+            question_type: questionType,
+            answer: formattedValue,
+          };
+        });
+      } else {
+        // Log warning if no answers found for debugging
+        console.warn(`No answers found for report ID: ${report.id}`);
+      }
       
       return {
         id: report.id,
@@ -57,6 +85,9 @@ export const generateAISummary = async (
         ])
       )
     };
+    
+    // Log the data being sent for debugging
+    console.log('Reports being sent to AI summary:', reportData);
     
     // Call our Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('ai-summary', {

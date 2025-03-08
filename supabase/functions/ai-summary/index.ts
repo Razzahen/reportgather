@@ -34,7 +34,7 @@ serve(async (req) => {
         Always cite your sources by mentioning store names and dates when providing insights.
         Be concise, professional, and focus on the most important information.
         
-        If there are no report answers available, clearly state this in your response.`;
+        If there are no report answers available or if answers are empty, clearly state this in your response.`;
     } else if (mode === 'chat') {
       systemMessage = `You are an AI retail analyst assistant helping with store report queries.
         You have access to report data from stores. When answering questions:
@@ -44,18 +44,28 @@ serve(async (req) => {
         4. Keep answers concise and professional
         
         Always back your statements with evidence from the reports.
-        If there are no report answers available, clearly state this in your response.`;
+        If there are no report answers available or if answers are empty, clearly state this in your response.`;
     }
     
-    // Prepare context information for the AI
+    // Prepare context information for the AI with enhanced formatting
     const reportSummary = reportData.length > 0 
       ? reportData.map(report => {
-          const answersText = report.answers && report.answers.length > 0
+          // Check if report has valid answers
+          const hasValidAnswers = report.answers && 
+                                 Array.isArray(report.answers) && 
+                                 report.answers.length > 0 &&
+                                 report.answers.some(a => a.answer !== undefined && a.answer !== null && a.answer !== 'No answer provided');
+          
+          // Format answers or provide a clear message if none exist
+          const answersText = hasValidAnswers
             ? report.answers.map(a => `- ${a.question}: ${a.answer}`).join("\n")
             : "No answers recorded in this report.";
             
+          // Format date for better readability
+          const reportDate = new Date(report.submitted_at).toISOString().split('T')[0];
+            
           return `
-REPORT: ${report.store_name} (${new Date(report.submitted_at).toISOString().split('T')[0]})
+REPORT: ${report.store_name} (${reportDate})
 Template: ${report.template_name}
 Status: ${report.completed ? 'Completed' : 'Incomplete'}
 Answers:
