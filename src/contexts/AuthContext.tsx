@@ -10,10 +10,27 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 
 // Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create a placeholder client if environment variables are missing
+let supabase: SupabaseClient;
+
+try {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+} catch (error) {
+  console.error('Failed to initialize Supabase client:', error);
+  // Create a mock client to prevent app from crashing
+  supabase = {
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signInWithPassword: () => Promise.resolve({ error: new Error('Supabase not configured') }),
+      signUp: () => Promise.resolve({ error: new Error('Supabase not configured') }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+  } as unknown as SupabaseClient;
+}
 
 type AuthContextType = {
   session: Session | null;
@@ -36,6 +53,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check if Supabase is properly configured
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setLoading(false);
+      toast({
+        title: "Supabase Configuration Missing",
+        description: "Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -53,11 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase not configured. Please add environment variables.");
+      }
+      
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -83,6 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase not configured. Please add environment variables.");
+      }
+      
       const { error } = await supabase.auth.signUp({ email, password });
       
       if (error) {
