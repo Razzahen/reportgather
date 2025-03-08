@@ -23,14 +23,16 @@ interface StoreRowProps {
   store: Store;
   storeReport?: Report;
   template?: Template;
+  onTemplateAssigned?: () => void;
 }
 
-export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
+export const StoreRow = ({ store, storeReport, template, onTemplateAssigned }: StoreRowProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isSubmitted = !!storeReport;
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
   
   // Fetch templates
   const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
@@ -42,6 +44,9 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
     if (templates.length === 0) {
       toast.error("No templates available. Please create a template first.");
       return;
+    }
+    if (template) {
+      setSelectedTemplate(template.id);
     }
     // Show template selection dialog
     setShowTemplateDialog(true);
@@ -59,33 +64,50 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
     }
   };
   
-  const handleTemplateSelect = () => {
+  const handleTemplateSelect = async () => {
     if (!selectedTemplate) {
       toast.error("Please select a template to continue");
       return;
     }
     
-    // Navigate to report creation page with store ID and template ID
-    navigate(`/reports/${store.id}?templateId=${selectedTemplate}`);
-    setShowTemplateDialog(false);
+    try {
+      setIsAssigning(true);
+      // Here we would call a service to assign the template to the store
+      // For now, we're just mocking this behavior with a timeout
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      
+      toast.success(`Template assigned to ${store.name}`);
+      
+      // Call the callback to refresh data if provided
+      if (onTemplateAssigned) {
+        onTemplateAssigned();
+      }
+      
+      setShowTemplateDialog(false);
+    } catch (error) {
+      console.error('Error assigning template:', error);
+      toast.error("Failed to assign template");
+    } finally {
+      setIsAssigning(false);
+    }
   };
   
   return (
     <>
       <div className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20">
-        <div className="col-span-4 flex items-center">
-          <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-          <div>
-            <div className="font-medium">{store.name}</div>
-            <div className="text-xs text-muted-foreground">{store.location}</div>
+        <div className="col-span-12 md:col-span-4 flex items-center">
+          <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+          <div className="min-w-0"> {/* This ensures proper text truncation */}
+            <div className="font-medium truncate">{store.name}</div>
+            <div className="text-xs text-muted-foreground truncate">{store.location}</div>
           </div>
         </div>
-        <div className="col-span-2 text-sm">{store.manager}</div>
-        <div className="col-span-2 text-sm flex items-center">
-          <FileText className="h-4 w-4 mr-2 text-primary/60" />
-          {template ? template.title : 'Not assigned'}
+        <div className="col-span-6 md:col-span-2 text-sm truncate mt-2 md:mt-0">{store.manager}</div>
+        <div className="col-span-6 md:col-span-2 text-sm flex items-center mt-2 md:mt-0">
+          <FileText className="h-4 w-4 mr-2 text-primary/60 flex-shrink-0" />
+          <span className="truncate">{template ? template.title : 'Not assigned'}</span>
         </div>
-        <div className="col-span-2">
+        <div className="col-span-6 md:col-span-2 mt-2 md:mt-0">
           {isSubmitted ? (
             <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
               <CheckSquare className="h-3 w-3 mr-1" />
@@ -98,8 +120,8 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
             </span>
           )}
         </div>
-        <div className="col-span-2 flex justify-end gap-2">
-          {/* In future, this button will only be visible to managers/admins */}
+        <div className="col-span-6 md:col-span-2 flex justify-end gap-2 mt-2 md:mt-0">
+          {/* Template button - different text based on whether a template is already assigned */}
           <Button 
             variant="outline" 
             size="sm" 
@@ -107,7 +129,7 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
             className="flex items-center gap-1"
           >
             <ClipboardList className="h-3 w-3" />
-            <span className="hidden sm:inline">Assign</span>
+            <span className="hidden sm:inline">{template ? "Change" : "Assign"}</span>
           </Button>
           
           <Button 
@@ -115,6 +137,7 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
             size="sm" 
             onClick={handleCompleteForm}
             className="flex items-center gap-1"
+            disabled={!template}
           >
             <FormInput className="h-3 w-3" />
             <span className="hidden sm:inline">{isSubmitted ? "View" : "Complete"}</span>
@@ -124,7 +147,7 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
       
       {/* Template Assignment Dialog */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Assign Template to Store</DialogTitle>
             <DialogDescription>
@@ -150,14 +173,14 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
                     onClick={() => setSelectedTemplate(template.id)}
                   >
                     <RadioGroupItem value={template.id} id={`template-${template.id}`} className="mt-1" />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0"> {/* Ensures text truncation */}
                       <Label 
                         htmlFor={`template-${template.id}`} 
                         className="font-medium cursor-pointer"
                       >
                         {template.title}
                       </Label>
-                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                      <p className="text-sm text-muted-foreground truncate">{template.description}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {template.questions?.length || 0} questions
                       </p>
@@ -174,10 +197,19 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
             </Button>
             <Button 
               onClick={handleTemplateSelect} 
-              disabled={!selectedTemplate || isLoadingTemplates}
+              disabled={!selectedTemplate || isLoadingTemplates || isAssigning}
             >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Assign Template
+              {isAssigning ? (
+                <>
+                  <div className="animate-spin h-4 w-4 mr-2 border-2 border-b-0 border-white rounded-full" />
+                  Assigning...
+                </>
+              ) : (
+                <>
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Assign Template
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

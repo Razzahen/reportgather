@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,8 @@ export function StoreReports() {
   const { 
     data: stores = [], 
     isLoading: isLoadingStores,
-    error: storesError
+    error: storesError,
+    refetch: refetchStores
   } = useQuery({
     queryKey: ['stores'],
     queryFn: getStores
@@ -29,7 +31,8 @@ export function StoreReports() {
   const { 
     data: reports = [], 
     isLoading: isLoadingReports,
-    error: reportsError 
+    error: reportsError,
+    refetch: refetchReports
   } = useQuery({
     queryKey: ['reports'],
     queryFn: getReports
@@ -38,7 +41,8 @@ export function StoreReports() {
   const { 
     data: templates = [], 
     isLoading: isLoadingTemplates,
-    error: templatesError
+    error: templatesError,
+    refetch: refetchTemplates
   } = useQuery({
     queryKey: ['templates'],
     queryFn: getTemplates
@@ -60,6 +64,13 @@ export function StoreReports() {
       toast.error('Failed to load templates');
     }
   }, [storesError, reportsError, templatesError]);
+  
+  // Function to refresh data after template assignment
+  const handleTemplateAssigned = () => {
+    // Refresh the reports and templates data
+    refetchReports();
+    refetchTemplates();
+  };
   
   const formatDate = (date: string) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -99,12 +110,6 @@ export function StoreReports() {
   
   const today = formatDate(new Date().toISOString());
   const isLoading = isLoadingStores || isLoadingReports || isLoadingTemplates;
-  
-  useEffect(() => {
-    console.log('Templates:', templates);
-    console.log('Reports:', reports);
-    console.log('Stores:', stores);
-  }, [templates, reports, stores]);
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -162,6 +167,7 @@ export function StoreReports() {
                           store={store} 
                           storeReport={storeReport}
                           template={template}
+                          onTemplateAssigned={handleTemplateAssigned}
                         />
                       );
                     })}
@@ -172,11 +178,11 @@ export function StoreReports() {
               <TabsContent value="list">
                 <div className="rounded-md border">
                   <div className="grid grid-cols-12 border-b bg-muted/50 px-4 py-3 text-sm font-medium">
-                    <div className="col-span-4">Store</div>
-                    <div className="col-span-2">Manager</div>
-                    <div className="col-span-2">Template</div>
-                    <div className="col-span-2">Status</div>
-                    <div className="col-span-2 text-right">Actions</div>
+                    <div className="col-span-12 md:col-span-4">Store</div>
+                    <div className="hidden md:block md:col-span-2">Manager</div>
+                    <div className="hidden md:block md:col-span-2">Template</div>
+                    <div className="hidden md:block md:col-span-2">Status</div>
+                    <div className="hidden md:block md:col-span-2 text-right">Actions</div>
                   </div>
                   
                   {filteredStores.length === 0 ? (
@@ -196,6 +202,7 @@ export function StoreReports() {
                           store={store} 
                           storeReport={storeReport}
                           template={template}
+                          onTemplateAssigned={handleTemplateAssigned}
                         />
                       );
                     })

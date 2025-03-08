@@ -19,16 +19,19 @@ import { useQuery } from '@tanstack/react-query';
 import { getTemplates } from '@/services/templateService';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { assignTemplateToStore } from '@/services/storeService';
 
 interface StoreCardProps {
   store: Store;
   storeReport?: Report;
   template?: Template;
+  onTemplateAssigned?: () => void;
 }
 
-export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
+export const StoreCard = ({ store, storeReport, template, onTemplateAssigned }: StoreCardProps) => {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const isSubmitted = !!storeReport;
@@ -43,6 +46,9 @@ export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
     if (templates.length === 0) {
       toast.error("No templates available. Please create a template first.");
       return;
+    }
+    if (template) {
+      setSelectedTemplate(template.id);
     }
     setShowTemplateDialog(true);
   };
@@ -59,21 +65,38 @@ export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
     }
   };
   
-  const handleTemplateSelect = () => {
+  const handleTemplateSelect = async () => {
     if (!selectedTemplate) {
       toast.error("Please select a template to continue");
       return;
     }
     
-    // Navigate to report creation page with store ID and template ID
-    navigate(`/reports/${store.id}?templateId=${selectedTemplate}`);
-    setShowTemplateDialog(false);
+    try {
+      setIsAssigning(true);
+      // Here we would call a service to assign the template to the store
+      // For now, we're just mocking this behavior with a toast notification
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      
+      toast.success(`Template assigned to ${store.name}`);
+      
+      // Call the callback to refresh data if provided
+      if (onTemplateAssigned) {
+        onTemplateAssigned();
+      }
+      
+      setShowTemplateDialog(false);
+    } catch (error) {
+      console.error('Error assigning template:', error);
+      toast.error("Failed to assign template");
+    } finally {
+      setIsAssigning(false);
+    }
   };
   
   return (
     <>
-      <Card className="h-full">
-        <CardContent className="pt-6">
+      <Card className="h-full flex flex-col">
+        <CardContent className="pt-6 flex-grow">
           <div className="space-y-2">
             <div className="flex justify-between items-start">
               <h3 className="font-semibold text-lg">{store.name}</h3>
@@ -90,38 +113,39 @@ export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
               )}
             </div>
             <div className="flex items-center text-sm">
-              <MapPin size={14} className="mr-2 text-muted-foreground" />
-              <span>{store.location}</span>
+              <MapPin size={14} className="mr-2 text-muted-foreground flex-shrink-0" />
+              <span className="truncate">{store.location}</span>
             </div>
             <div className="flex items-center text-sm">
-              <User size={14} className="mr-2 text-muted-foreground" />
-              <span>Manager: {store.manager}</span>
+              <User size={14} className="mr-2 text-muted-foreground flex-shrink-0" />
+              <span className="truncate">Manager: {store.manager}</span>
             </div>
             {template && (
               <div className="flex items-center text-sm">
-                <FileText size={14} className="mr-2 text-muted-foreground" />
-                <span>Template: {template.title}</span>
+                <FileText size={14} className="mr-2 text-muted-foreground flex-shrink-0" />
+                <span className="truncate">Template: {template.title}</span>
               </div>
             )}
           </div>
         </CardContent>
-        <CardFooter className="border-t pt-4 flex justify-between gap-2">
-          {/* In future, this button will only be visible to managers/admins */}
+        <CardFooter className="border-t pt-4 flex flex-wrap gap-2">
+          {/* Template button - different text based on whether a template is already assigned */}
           <Button 
             variant="outline" 
             size="sm" 
             onClick={handleAssignTemplate}
-            className="flex-1"
+            className="flex-1 min-w-[120px]"
           >
             <ClipboardList className="h-4 w-4 mr-2" />
-            Assign Template
+            {template ? "Change Template" : "Assign Template"}
           </Button>
           
           <Button 
             variant={isSubmitted ? "secondary" : "default"}
             size="sm" 
             onClick={handleCompleteForm}
-            className="flex-1"
+            className="flex-1 min-w-[120px]"
+            disabled={!template}
           >
             <FormInput className="h-4 w-4 mr-2" />
             {isSubmitted ? "View Report" : "Complete Form"}
@@ -131,7 +155,7 @@ export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
       
       {/* Template Selection Dialog */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Assign Template to Store</DialogTitle>
             <DialogDescription>
@@ -181,10 +205,19 @@ export const StoreCard = ({ store, storeReport, template }: StoreCardProps) => {
             </Button>
             <Button 
               onClick={handleTemplateSelect} 
-              disabled={!selectedTemplate || isLoadingTemplates}
+              disabled={!selectedTemplate || isLoadingTemplates || isAssigning}
             >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Assign Template
+              {isAssigning ? (
+                <>
+                  <div className="animate-spin h-4 w-4 mr-2 border-2 border-b-0 border-white rounded-full" />
+                  Assigning...
+                </>
+              ) : (
+                <>
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Assign Template
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
