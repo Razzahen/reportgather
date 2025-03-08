@@ -8,8 +8,7 @@ import {
   Home,
   Menu, 
   Store, 
-  Users,
-  ChevronRight
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -40,11 +39,7 @@ export function SideMenu({ className }: SideMenuProps) {
     { 
       name: 'Templates', 
       path: '/templates', 
-      icon: ClipboardList,
-      children: [
-        { name: 'All Templates', path: '/templates' },
-        { name: 'Create New', path: '/templates/create' },
-      ]
+      icon: ClipboardList
     },
     { 
       name: 'Store Reports', 
@@ -97,7 +92,7 @@ export function SideMenu({ className }: SideMenuProps) {
         <ul className="space-y-1 px-2">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path || 
-                             (item.children && item.children.some(child => location.pathname === child.path));
+                             (location.pathname.startsWith(item.path) && item.path !== '/');
             
             return (
               <li key={item.path}>
@@ -112,30 +107,7 @@ export function SideMenu({ className }: SideMenuProps) {
                 >
                   <item.icon size={18} className={cn('flex-shrink-0', collapsed ? 'mx-auto' : 'mr-2')} />
                   {!collapsed && <span>{item.name}</span>}
-                  {!collapsed && item.children && (
-                    <ChevronRight size={16} className="ml-auto" />
-                  )}
                 </Link>
-                
-                {!collapsed && item.children && (
-                  <ul className="mt-1 space-y-1 pl-6">
-                    {item.children.map((child) => (
-                      <li key={child.path}>
-                        <Link
-                          to={child.path}
-                          className={cn(
-                            'block rounded-md px-3 py-2 text-sm transition-colors',
-                            location.pathname === child.path
-                              ? 'bg-primary/5 text-primary'
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                          )}
-                        >
-                          {child.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </li>
             );
           })}
