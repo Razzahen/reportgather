@@ -1,30 +1,19 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  CheckSquare, 
-  Clock, 
-  FileText, 
-  Filter, 
-  Search, 
-  Store as StoreIcon, 
-  Calendar, 
-  ArrowUpDown 
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Report } from '@/types/supabase';
+import { Store, Report, Template } from '@/types/supabase';
 import { getStores } from '@/services/storeService';
 import { getReports } from '@/services/reportService';
 import { getTemplates } from '@/services/templateService';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { StoreCard } from './store-reports/StoreCard';
+import { StoreRow } from './store-reports/StoreRow';
+import { StoreFilter } from './store-reports/StoreFilter';
 
 export function StoreReports() {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -125,36 +114,14 @@ export function StoreReports() {
         </p>
       </div>
       
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-        <div className="relative w-full md:w-auto md:flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search stores..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-          <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Stores</SelectItem>
-              <SelectItem value="completed">Completed Reports</SelectItem>
-              <SelectItem value="pending">Pending Reports</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
-          </Button>
-        </div>
-      </div>
+      <StoreFilter 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+      />
       
       <Card>
         <CardHeader className="pb-3">
@@ -184,49 +151,12 @@ export function StoreReports() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredStores.map((store) => {
                       const storeReport = reports.find(r => r.store_id === store.id);
-                      const isSubmitted = !!storeReport;
-                      
                       return (
-                        <Card 
+                        <StoreCard 
                           key={store.id} 
-                          className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer border-l-4 ${isSubmitted ? 'border-l-green-500' : 'border-l-amber-500'}`}
-                          onClick={() => navigate(`/reports/${store.id}`)}
-                        >
-                          <CardContent className="p-5">
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-2">
-                                <div className="flex items-center">
-                                  <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                                  <h3 className="font-medium">{store.name}</h3>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{store.location}</p>
-                                <p className="text-xs flex items-center">
-                                  Manager: {store.manager}
-                                </p>
-                              </div>
-                              
-                              <div className={`p-2 rounded-full ${isSubmitted ? 'bg-green-100' : 'bg-amber-100'}`}>
-                                {isSubmitted ? (
-                                  <CheckSquare className="h-5 w-5 text-green-600" />
-                                ) : (
-                                  <Clock className="h-5 w-5 text-amber-600" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="mt-4">
-                              <div className={`text-sm ${isSubmitted ? 'text-green-600' : 'text-amber-600'} font-medium`}>
-                                {isSubmitted ? 'Report Submitted' : 'Report Pending'}
-                              </div>
-                              
-                              {isSubmitted && storeReport && (
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  Submitted at {new Date(storeReport.submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
+                          store={store} 
+                          storeReport={storeReport} 
+                        />
                       );
                     })}
                   </div>
@@ -249,43 +179,17 @@ export function StoreReports() {
                   ) : (
                     filteredStores.map((store) => {
                       const storeReport = reports.find(r => r.store_id === store.id);
-                      const isSubmitted = !!storeReport;
                       const template = storeReport && storeReport.template 
                         ? storeReport.template
                         : templates[0]; // Default template
                       
                       return (
-                        <div 
-                          key={store.id}
-                          className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20 cursor-pointer"
-                          onClick={() => navigate(`/reports/${store.id}`)}
-                        >
-                          <div className="col-span-5 flex items-center">
-                            <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{store.name}</div>
-                              <div className="text-xs text-muted-foreground">{store.location}</div>
-                            </div>
-                          </div>
-                          <div className="col-span-3 text-sm">{store.manager}</div>
-                          <div className="col-span-2 text-sm flex items-center">
-                            <FileText className="h-4 w-4 mr-2 text-primary/60" />
-                            {template?.title || 'N/A'}
-                          </div>
-                          <div className="col-span-2 text-right">
-                            {isSubmitted ? (
-                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
-                                <CheckSquare className="h-3 w-3 mr-1" />
-                                Complete
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Pending
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <StoreRow 
+                          key={store.id} 
+                          store={store} 
+                          storeReport={storeReport}
+                          template={template}
+                        />
                       );
                     })
                   )}
