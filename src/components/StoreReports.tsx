@@ -167,6 +167,8 @@ export function StoreReports() {
                           store={store} 
                           storeReport={storeReport}
                           template={template}
+                          templates={templates}
+                          isLoadingTemplates={isLoadingTemplates}
                           onTemplateAssigned={handleTemplateAssigned}
                         />
                       );
@@ -202,6 +204,8 @@ export function StoreReports() {
                           store={store} 
                           storeReport={storeReport}
                           template={template}
+                          templates={templates}
+                          isLoadingTemplates={isLoadingTemplates}
                           onTemplateAssigned={handleTemplateAssigned}
                         />
                       );

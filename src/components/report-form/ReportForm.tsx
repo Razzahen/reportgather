@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,16 +30,20 @@ const ReportForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(templateIdFromUrl);
   
-  const { data: store, isLoading: isLoadingStore } = useQuery({
-    queryKey: ['store', storeId],
-    queryFn: () => getStore(storeId),
-    enabled: !!storeId,
-  });
-
+  // For edit mode, we need to fetch the report first
   const { data: existingReport, isLoading: isLoadingReport } = useQuery({
     queryKey: ['report', reportId],
     queryFn: () => getReportById(reportId),
     enabled: !!reportId,
+  });
+  
+  // Get storeId from report in edit mode if it's not provided directly in URL
+  const effectiveStoreId = existingReport?.store_id || storeId;
+  
+  const { data: store, isLoading: isLoadingStore } = useQuery({
+    queryKey: ['store', effectiveStoreId],
+    queryFn: () => effectiveStoreId ? getStore(effectiveStoreId) : null,
+    enabled: !!effectiveStoreId,
   });
 
   useEffect(() => {
@@ -82,7 +87,7 @@ const ReportForm: React.FC = () => {
     mutationFn: async () => {
       setIsSubmitting(true);
       
-      if (!selectedTemplate || !storeId || !template || !store) {
+      if (!selectedTemplate || !effectiveStoreId || !template || !store) {
         throw new Error('Missing required information to submit report');
       }
       
@@ -94,7 +99,7 @@ const ReportForm: React.FC = () => {
       
       const newReport: Omit<Report, 'id' | 'created_at' | 'updated_at' | 'user_id'> = {
         template_id: selectedTemplate,
-        store_id: storeId,
+        store_id: effectiveStoreId,
         submitted_at: new Date().toISOString(),
         completed: true
       };
@@ -199,7 +204,7 @@ const ReportForm: React.FC = () => {
     );
   }
 
-  if (!store) {
+  if (!store && effectiveStoreId) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold">Store not found</h2>

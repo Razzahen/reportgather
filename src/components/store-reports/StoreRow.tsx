@@ -1,222 +1,157 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckSquare, Clock, FileText, StoreIcon, ClipboardList, FormInput } from 'lucide-react';
-import { Store, Report, Template } from '@/types/supabase';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useQuery } from '@tanstack/react-query';
-import { getTemplates } from '@/services/templateService';
+import { MoreHorizontal, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+import { Store, Report, Template } from '@/types/supabase';
 import { assignTemplateToStore } from '@/services/storeService';
 
 interface StoreRowProps {
   store: Store;
   storeReport?: Report;
   template?: Template;
-  onTemplateAssigned?: () => void;
+  onTemplateAssigned: () => void;
+  templates?: Template[];
+  isLoadingTemplates?: boolean;
 }
 
-export const StoreRow = ({ store, storeReport, template, onTemplateAssigned }: StoreRowProps) => {
+export function StoreRow({ 
+  store, 
+  storeReport, 
+  template, 
+  onTemplateAssigned,
+  templates = [],
+  isLoadingTemplates = false
+}: StoreRowProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const isSubmitted = storeReport?.completed || false;
-  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [isAssigning, setIsAssigning] = useState(false);
-  
-  // Fetch templates
-  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
-    queryKey: ['templates'],
-    queryFn: getTemplates
-  });
-  
-  const handleAssignTemplate = () => {
-    if (templates.length === 0) {
-      toast.error("No templates available. Please create a template first.");
+  const [assigning, setAssigning] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(
+    template?.id
+  );
+
+  const handleAssignTemplate = async () => {
+    if (!selectedTemplateId) {
+      toast.error('Please select a template first');
       return;
     }
-    if (template) {
-      setSelectedTemplate(template.id);
-    }
-    // Show template selection dialog
-    setShowTemplateDialog(true);
-  };
-  
-  const handleCompleteForm = () => {
-    if (isSubmitted) {
-      // Navigate to view the existing report
-      navigate(`/reports/edit/${storeReport?.id}`);
-    } else if (storeReport && template) {
-      // Navigate to edit existing report
-      navigate(`/reports/edit/${storeReport.id}`);
-    } else if (template) {
-      // Navigate to create a new report with the assigned template
-      navigate(`/reports/${store.id}?templateId=${template.id}`);
-    } else {
-      toast.error("This store has no template assigned. Please assign a template first.");
-    }
-  };
-  
-  const handleTemplateSelect = async () => {
-    if (!selectedTemplate) {
-      toast.error("Please select a template to continue");
-      return;
-    }
-    
+
+    setAssigning(true);
     try {
-      setIsAssigning(true);
-      // Call the service to assign the template to the store
-      await assignTemplateToStore(store.id, selectedTemplate);
-      
-      toast.success(`Template assigned to ${store.name}`);
-      
-      // Call the callback to refresh data if provided
-      if (onTemplateAssigned) {
-        onTemplateAssigned();
-      }
-      
-      setShowTemplateDialog(false);
+      await assignTemplateToStore(store.id, selectedTemplateId);
+      toast.success('Template assigned successfully');
+      onTemplateAssigned();
     } catch (error) {
       console.error('Error assigning template:', error);
-      toast.error("Failed to assign template");
+      toast.error('Failed to assign template');
     } finally {
-      setIsAssigning(false);
+      setAssigning(false);
     }
   };
-  
+
+  const handleNavigateToForm = () => {
+    if (storeReport) {
+      navigate(`/reports/edit/${storeReport.id}`);
+    } else {
+      navigate(`/reports/${store.id}${selectedTemplateId ? `?templateId=${selectedTemplateId}` : ''}`);
+    }
+  };
+
   return (
-    <>
-      <div className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20">
-        <div className="col-span-12 md:col-span-4 flex items-center">
-          <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-          <div className="min-w-0"> {/* This ensures proper text truncation */}
-            <div className="font-medium truncate">{store.name}</div>
-            <div className="text-xs text-muted-foreground truncate">{store.location}</div>
-          </div>
-        </div>
-        <div className="col-span-6 md:col-span-2 text-sm truncate mt-2 md:mt-0">{store.manager}</div>
-        <div className="col-span-6 md:col-span-2 text-sm flex items-center mt-2 md:mt-0">
-          <FileText className="h-4 w-4 mr-2 text-primary/60 flex-shrink-0" />
-          <span className="truncate">{template ? template.title : 'Not assigned'}</span>
-        </div>
-        <div className="col-span-6 md:col-span-2 mt-2 md:mt-0">
-          {isSubmitted ? (
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
-              <CheckSquare className="h-3 w-3 mr-1" />
-              Completed
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
-              <Clock className="h-3 w-3 mr-1" />
-              Pending
-            </span>
-          )}
-        </div>
-        <div className="col-span-6 md:col-span-2 flex justify-end gap-2 mt-2 md:mt-0">
-          {/* Template button - different text based on whether a template is already assigned */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAssignTemplate}
-            className="flex items-center gap-1"
-          >
-            <ClipboardList className="h-3 w-3" />
-            <span className="hidden sm:inline">{template ? "Change" : "Assign"}</span>
-          </Button>
-          
-          <Button 
-            variant={isSubmitted ? "secondary" : "default"}
-            size="sm" 
-            onClick={handleCompleteForm}
-            className="flex items-center gap-1"
-            disabled={!template}
-          >
-            <FormInput className="h-3 w-3" />
-            <span className="hidden sm:inline">{isSubmitted ? "View" : "Complete"}</span>
-          </Button>
+    <div className="grid grid-cols-12 border-b px-4 py-3 items-center">
+      <div className="col-span-12 md:col-span-4 mb-2 md:mb-0">
+        <div className="flex flex-col">
+          <div className="font-medium truncate">{store.name}</div>
+          <div className="text-sm text-muted-foreground truncate">{store.location}</div>
         </div>
       </div>
       
-      {/* Template Assignment Dialog */}
-      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign Template to Store</DialogTitle>
-            <DialogDescription>
-              Select a report template to assign to {store.name}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {isLoadingTemplates ? (
-            <div className="flex justify-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : templates.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
-              No templates available. Please create a template first.
-            </div>
+      <div className="hidden md:block md:col-span-2 truncate">
+        {store.manager}
+      </div>
+      
+      <div className="col-span-7 md:col-span-2 flex items-center">
+        {isLoadingTemplates ? (
+          <Skeleton className="h-8 w-full" />
+        ) : (
+          <Select
+            value={selectedTemplateId}
+            onValueChange={setSelectedTemplateId}
+            disabled={assigning}
+          >
+            <SelectTrigger className="w-[140px] md:w-full text-xs md:text-sm">
+              <SelectValue placeholder="Select template" />
+            </SelectTrigger>
+            <SelectContent>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+      
+      <div className="hidden md:block md:col-span-2">
+        <Badge variant={storeReport?.completed ? "success" : "secondary"}>
+          {storeReport?.completed ? (
+            <><CheckCircle className="mr-1 h-3 w-3" /> Completed</>
           ) : (
-            <RadioGroup value={selectedTemplate || ''} onValueChange={setSelectedTemplate}>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {templates.map(template => (
-                  <div 
-                    key={template.id} 
-                    className="flex items-start space-x-2 p-3 rounded-md border cursor-pointer hover:bg-muted transition-colors"
-                    onClick={() => setSelectedTemplate(template.id)}
-                  >
-                    <RadioGroupItem value={template.id} id={`template-${template.id}`} className="mt-1" />
-                    <div className="flex-1 min-w-0"> {/* Ensures text truncation */}
-                      <Label 
-                        htmlFor={`template-${template.id}`} 
-                        className="font-medium cursor-pointer"
-                      >
-                        {template.title}
-                      </Label>
-                      <p className="text-sm text-muted-foreground truncate">{template.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {template.questions?.length || 0} questions
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
+            <><AlertCircle className="mr-1 h-3 w-3" /> Pending</>
           )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleTemplateSelect} 
-              disabled={!selectedTemplate || isLoadingTemplates || isAssigning}
-            >
-              {isAssigning ? (
-                <>
-                  <div className="animate-spin h-4 w-4 mr-2 border-2 border-b-0 border-white rounded-full" />
-                  Assigning...
-                </>
-              ) : (
-                <>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Assign Template
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        </Badge>
+      </div>
+      
+      <div className="col-span-5 md:col-span-2 flex justify-end gap-2">
+        {template ? (
+          <Button 
+            size="sm"
+            variant="outline"
+            className="text-xs whitespace-nowrap min-w-20"
+            onClick={handleAssignTemplate}
+            disabled={assigning || !selectedTemplateId}
+          >
+            {assigning ? 'Assigning...' : 'Change Template'}
+          </Button>
+        ) : (
+          <Button 
+            size="sm"
+            variant="outline" 
+            className="text-xs whitespace-nowrap min-w-20"
+            onClick={handleAssignTemplate}
+            disabled={assigning || !selectedTemplateId}
+          >
+            {assigning ? 'Assigning...' : 'Assign Template'}
+          </Button>
+        )}
+        
+        <Button 
+          size="sm" 
+          className="text-xs whitespace-nowrap min-w-20"
+          onClick={handleNavigateToForm}
+          disabled={!template}
+        >
+          Complete Form
+        </Button>
+      </div>
+    </div>
   );
-};
+}
