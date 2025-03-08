@@ -18,12 +18,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ViewTemplate from "./components/ViewTemplate";
 import EditTemplate from "./components/EditTemplate";
 import Stores from "./components/Stores";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
   },
 });
@@ -34,7 +36,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
     <div className="flex-1 ml-16 md:ml-64">
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-32">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
   </div>

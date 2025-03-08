@@ -2,10 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SideMenu } from '../components/SideMenu';
-import CEODashboard from '../components/CEODashboard';
+import { CEODashboard } from '../components/Dashboard/CEODashboard';
 import Navbar from '../components/Navbar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -30,7 +31,9 @@ const Index = () => {
       >
         <Navbar />
         <main className="container mx-auto px-4 py-8 pt-32">
-          <CEODashboard />
+          <ErrorBoundary>
+            <CEODashboard />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
