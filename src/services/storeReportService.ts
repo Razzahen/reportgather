@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getStores } from './storeService';
-import { getReports, getReportsByStore } from './reportService';
+import { getReports, getReportsByStoreId } from './reportService';
 import { Store, Report } from '@/types/supabase';
 
 export const useStoreReportsData = () => {
@@ -48,7 +48,7 @@ export const useStoreReportsData = () => {
 export const useStoreReport = (storeId: string) => {
   return useQuery({
     queryKey: ['store-reports', storeId],
-    queryFn: () => getReportsByStore(storeId),
+    queryFn: () => getReportsByStoreId(storeId),
     enabled: !!storeId
   });
 };

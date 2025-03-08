@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react';
@@ -36,36 +35,68 @@ export function EditTemplate() {
     queryKey: ['template', id],
     queryFn: () => id ? getTemplateWithQuestions(id) : null,
     enabled: !!id,
-    onSuccess: (data) => {
-      if (data) {
-        setTitle(data.title);
-        setDescription(data.description);
-        
-        if (data.questions && data.questions.length > 0) {
-          setQuestions(data.questions.map(q => ({
-            id: q.id,
-            text: q.text,
-            type: q.type,
-            required: q.required,
-            options: q.options,
-            order_index: q.order_index
-          })));
-        } else {
-          // Default empty question if none exist
-          setQuestions([{
-            id: crypto.randomUUID(),
-            text: '',
-            type: 'text',
-            required: true,
-            options: null,
-            order_index: 0
-          }]);
+    meta: {
+      onSuccess: (data: Template | null) => {
+        if (data) {
+          setTitle(data.title);
+          setDescription(data.description);
+          
+          if (data.questions && data.questions.length > 0) {
+            setQuestions(data.questions.map(q => ({
+              id: q.id,
+              text: q.text,
+              type: q.type,
+              required: q.required,
+              options: q.options,
+              order_index: q.order_index
+            })));
+          } else {
+            // Default empty question if none exist
+            setQuestions([{
+              id: crypto.randomUUID(),
+              text: '',
+              type: 'text',
+              required: true,
+              options: null,
+              order_index: 0
+            }]);
+          }
+          
+          setIsLoaded(true);
         }
-        
-        setIsLoaded(true);
       }
     }
   });
+
+  useEffect(() => {
+    if (template) {
+      setTitle(template.title);
+      setDescription(template.description);
+      
+      if (template.questions && template.questions.length > 0) {
+        setQuestions(template.questions.map(q => ({
+          id: q.id,
+          text: q.text,
+          type: q.type,
+          required: q.required,
+          options: q.options,
+          order_index: q.order_index
+        })));
+      } else {
+        // Default empty question if none exist
+        setQuestions([{
+          id: crypto.randomUUID(),
+          text: '',
+          type: 'text',
+          required: true,
+          options: null,
+          order_index: 0
+        }]);
+      }
+      
+      setIsLoaded(true);
+    }
+  }, [template]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {

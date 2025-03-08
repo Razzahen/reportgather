@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -33,27 +32,33 @@ export function StoreReports() {
   const { data: stores = [], isLoading: isLoadingStores } = useQuery({
     queryKey: ['stores'],
     queryFn: getStores,
-    onError: (error) => {
-      console.error('Error fetching stores:', error);
-      toast.error('Failed to load stores');
+    onSettled: (data, error) => {
+      if (error) {
+        console.error('Error fetching stores:', error);
+        toast.error('Failed to load stores');
+      }
     }
   });
   
   const { data: reports = [], isLoading: isLoadingReports } = useQuery({
     queryKey: ['reports'],
     queryFn: getReports,
-    onError: (error) => {
-      console.error('Error fetching reports:', error);
-      toast.error('Failed to load reports');
+    onSettled: (data, error) => {
+      if (error) {
+        console.error('Error fetching reports:', error);
+        toast.error('Failed to load reports');
+      }
     }
   });
   
   const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
     queryKey: ['templates'],
     queryFn: getTemplates,
-    onError: (error) => {
-      console.error('Error fetching templates:', error);
-      toast.error('Failed to load templates');
+    onSettled: (data, error) => {
+      if (error) {
+        console.error('Error fetching templates:', error);
+        toast.error('Failed to load templates');
+      }
     }
   });
   
