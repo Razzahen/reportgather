@@ -3,9 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Template, Question } from '@/types/supabase';
 
 export const getTemplates = async (): Promise<Template[]> => {
+  // Fetch templates along with their questions count
   const { data, error } = await supabase
     .from('templates')
-    .select('*')
+    .select(`
+      *,
+      questions:questions(*)
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {

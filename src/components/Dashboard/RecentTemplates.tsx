@@ -58,6 +58,9 @@ export function RecentTemplates() {
                   <h4 className="font-medium">{template.title}</h4>
                   <p className="text-xs text-muted-foreground">{formatDate(template.created_at)}</p>
                   <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{template.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {template.questions ? template.questions.length : 0} questions
+                  </p>
                 </div>
               </li>
             ))}

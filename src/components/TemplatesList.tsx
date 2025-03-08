@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, FileText, Edit, Trash2, Search, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -158,7 +158,8 @@ export function TemplatesList() {
               <CardFooter className="bg-muted/50 px-6 py-3 flex justify-between items-center">
                 <div className="text-sm">
                   <span className="font-medium">
-                    {template.questions?.length || 0}
+                    {/* Use the questions array length from the nested selection */}
+                    {template.questions ? template.questions.length : 0}
                   </span> questions
                 </div>
                 <Button variant="outline" size="sm" asChild>
