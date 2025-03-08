@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types/supabase';
 
@@ -95,12 +96,14 @@ export const assignTemplateToStore = async (storeId: string, templateId: string)
     .eq('store_id', storeId)
     .limit(1);
   
+  const currentDate = new Date().toISOString();
+  
   if (existingReports && existingReports.length > 0) {
     const { error: updateError } = await supabase
       .from('reports')
       .update({
         template_id: templateId,
-        updated_at: new Date().toISOString(),
+        updated_at: currentDate,
       })
       .eq('store_id', storeId);
     
@@ -116,7 +119,7 @@ export const assignTemplateToStore = async (storeId: string, templateId: string)
         template_id: templateId,
         user_id: user.id,
         completed: false,
-        submitted_at: null,
+        submitted_at: currentDate, // Provide a value for submitted_at
       });
     
     if (insertError) {
