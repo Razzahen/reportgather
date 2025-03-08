@@ -59,6 +59,15 @@ export const createTemplate = async (
   template: Omit<Template, 'id' | 'created_at' | 'updated_at' | 'user_id'>,
   questions: Omit<Question, 'id' | 'template_id' | 'created_at'>[]
 ): Promise<Template> => {
+  // Check if user is authenticated
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('You must be logged in to create a template');
+  }
+  
+  console.log('Creating template with user ID:', session.user.id);
+  
   // Start a transaction
   const { data, error } = await supabase.rpc('create_template_with_questions', {
     template_title: template.title,
@@ -81,7 +90,8 @@ export const createTemplate = async (
       .from('templates')
       .insert({
         title: template.title,
-        description: template.description
+        description: template.description,
+        user_id: session.user.id // Explicitly set the user_id here
       })
       .select()
       .single();

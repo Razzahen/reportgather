@@ -13,10 +13,14 @@ DECLARE
   template_record JSONB;
   questions_records JSONB = '[]'::JSONB;
   q JSONB;
+  current_user_id UUID;
 BEGIN
+  -- Get the current user ID from the auth context
+  current_user_id := auth.uid();
+  
   -- Create the template
   INSERT INTO templates (title, description, user_id)
-  VALUES (template_title, template_description, auth.uid())
+  VALUES (template_title, template_description, current_user_id)
   RETURNING id INTO new_template_id;
   
   -- Get the template record
