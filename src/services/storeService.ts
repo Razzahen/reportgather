@@ -32,9 +32,19 @@ export const getStore = async (id: string): Promise<Store | null> => {
 };
 
 export const createStore = async (store: Omit<Store, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Store> => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be logged in to create a store');
+  }
+  
   const { data, error } = await supabase
     .from('stores')
-    .insert(store)
+    .insert({
+      ...store,
+      user_id: user.id // Set the user_id to the current user's ID
+    })
     .select()
     .single();
 
