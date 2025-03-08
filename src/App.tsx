@@ -15,8 +15,17 @@ import { SideMenu } from "./components/SideMenu";
 import Navbar from "./components/Navbar";
 import TemplatesList from "./components/TemplatesList";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ViewTemplate from "./components/ViewTemplate";
+import EditTemplate from "./components/EditTemplate";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen flex w-full bg-background">
@@ -62,6 +71,22 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <CreateTemplate />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/templates/:id" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ViewTemplate />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/templates/edit/:id" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <EditTemplate />
                 </AppLayout>
               </ProtectedRoute>
             } />

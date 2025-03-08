@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   CheckSquare, 
@@ -16,7 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockStores, mockReports, mockTemplates } from '@/utils/mockData';
+import { Store, Report } from '@/types/supabase';
+import { getStores } from '@/services/storeService';
+import { getReports } from '@/services/reportService';
+import { getTemplates } from '@/services/templateService';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function StoreReports() {
   const navigate = useNavigate();
@@ -24,17 +29,45 @@ export function StoreReports() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
+  // Fetch data from Supabase
+  const { data: stores = [], isLoading: isLoadingStores } = useQuery({
+    queryKey: ['stores'],
+    queryFn: getStores,
+    onError: (error) => {
+      console.error('Error fetching stores:', error);
+      toast.error('Failed to load stores');
+    }
+  });
+  
+  const { data: reports = [], isLoading: isLoadingReports } = useQuery({
+    queryKey: ['reports'],
+    queryFn: getReports,
+    onError: (error) => {
+      console.error('Error fetching reports:', error);
+      toast.error('Failed to load reports');
+    }
+  });
+  
+  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ['templates'],
+    queryFn: getTemplates,
+    onError: (error) => {
+      console.error('Error fetching templates:', error);
+      toast.error('Failed to load templates');
+    }
+  });
+  
   // Format date for display
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Intl.DateTimeFormat('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric'
-    }).format(date);
+    }).format(new Date(date));
   };
   
   // Filter and sort the stores
-  const filteredStores = mockStores
+  const filteredStores = stores
     .filter(store => {
       if (searchTerm) {
         return (
@@ -48,7 +81,7 @@ export function StoreReports() {
     .filter(store => {
       if (statusFilter === 'all') return true;
       
-      const storeReport = mockReports.find(r => r.storeId === store.id);
+      const storeReport = reports.find(r => r.store_id === store.id);
       return statusFilter === 'completed' ? !!storeReport : !storeReport;
     })
     .sort((a, b) => {
@@ -62,7 +95,8 @@ export function StoreReports() {
       }
     });
   
-  const today = formatDate(new Date());
+  const today = formatDate(new Date().toISOString());
+  const isLoading = isLoadingStores || isLoadingReports || isLoadingTemplates;
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -112,123 +146,135 @@ export function StoreReports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="grid" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="grid">Grid View</TabsTrigger>
-              <TabsTrigger value="list">List View</TabsTrigger>
-            </TabsList>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <Tabs defaultValue="grid" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="grid">Grid View</TabsTrigger>
+                <TabsTrigger value="list">List View</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="grid" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredStores.map((store) => {
-                  const storeReport = mockReports.find(r => r.storeId === store.id);
-                  const isSubmitted = !!storeReport;
-                  
-                  return (
-                    <Card 
-                      key={store.id} 
-                      className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer border-l-4 ${isSubmitted ? 'border-l-green-500' : 'border-l-amber-500'}`}
-                      onClick={() => navigate(`/reports/${store.id}`)}
-                    >
-                      <CardContent className="p-5">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-2">
-                            <div className="flex items-center">
-                              <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                              <h3 className="font-medium">{store.name}</h3>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{store.location}</p>
-                            <p className="text-xs flex items-center">
-                              Manager: {store.manager}
-                            </p>
-                          </div>
-                          
-                          <div className={`p-2 rounded-full ${isSubmitted ? 'bg-green-100' : 'bg-amber-100'}`}>
-                            {isSubmitted ? (
-                              <CheckSquare className="h-5 w-5 text-green-600" />
-                            ) : (
-                              <Clock className="h-5 w-5 text-amber-600" />
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="mt-4">
-                          <div className={`text-sm ${isSubmitted ? 'text-green-600' : 'text-amber-600'} font-medium`}>
-                            {isSubmitted ? 'Report Submitted' : 'Report Pending'}
-                          </div>
-                          
-                          {isSubmitted && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Submitted at 6:45 PM
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="list">
-              <div className="rounded-md border">
-                <div className="grid grid-cols-12 border-b bg-muted/50 px-4 py-3 text-sm font-medium">
-                  <div className="col-span-5">Store</div>
-                  <div className="col-span-3">Manager</div>
-                  <div className="col-span-2">Template</div>
-                  <div className="col-span-2 text-right">Status</div>
-                </div>
-                
+              <TabsContent value="grid" className="space-y-4">
                 {filteredStores.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-muted-foreground">
+                  <div className="text-center py-8 text-muted-foreground">
                     No stores match your filter criteria
                   </div>
                 ) : (
-                  filteredStores.map((store) => {
-                    const storeReport = mockReports.find(r => r.storeId === store.id);
-                    const isSubmitted = !!storeReport;
-                    const template = storeReport 
-                      ? mockTemplates.find(t => t.id === storeReport.templateId)
-                      : mockTemplates[0]; // Default template
-                    
-                    return (
-                      <div 
-                        key={store.id}
-                        className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20 cursor-pointer"
-                        onClick={() => navigate(`/reports/${store.id}`)}
-                      >
-                        <div className="col-span-5 flex items-center">
-                          <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium">{store.name}</div>
-                            <div className="text-xs text-muted-foreground">{store.location}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredStores.map((store) => {
+                      const storeReport = reports.find(r => r.store_id === store.id);
+                      const isSubmitted = !!storeReport;
+                      
+                      return (
+                        <Card 
+                          key={store.id} 
+                          className={`relative overflow-hidden transition-all hover:shadow-md cursor-pointer border-l-4 ${isSubmitted ? 'border-l-green-500' : 'border-l-amber-500'}`}
+                          onClick={() => navigate(`/reports/${store.id}`)}
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-2">
+                                <div className="flex items-center">
+                                  <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <h3 className="font-medium">{store.name}</h3>
+                                </div>
+                                <p className="text-sm text-muted-foreground">{store.location}</p>
+                                <p className="text-xs flex items-center">
+                                  Manager: {store.manager}
+                                </p>
+                              </div>
+                              
+                              <div className={`p-2 rounded-full ${isSubmitted ? 'bg-green-100' : 'bg-amber-100'}`}>
+                                {isSubmitted ? (
+                                  <CheckSquare className="h-5 w-5 text-green-600" />
+                                ) : (
+                                  <Clock className="h-5 w-5 text-amber-600" />
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="mt-4">
+                              <div className={`text-sm ${isSubmitted ? 'text-green-600' : 'text-amber-600'} font-medium`}>
+                                {isSubmitted ? 'Report Submitted' : 'Report Pending'}
+                              </div>
+                              
+                              {isSubmitted && storeReport && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Submitted at {new Date(storeReport.submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="list">
+                <div className="rounded-md border">
+                  <div className="grid grid-cols-12 border-b bg-muted/50 px-4 py-3 text-sm font-medium">
+                    <div className="col-span-5">Store</div>
+                    <div className="col-span-3">Manager</div>
+                    <div className="col-span-2">Template</div>
+                    <div className="col-span-2 text-right">Status</div>
+                  </div>
+                  
+                  {filteredStores.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-muted-foreground">
+                      No stores match your filter criteria
+                    </div>
+                  ) : (
+                    filteredStores.map((store) => {
+                      const storeReport = reports.find(r => r.store_id === store.id);
+                      const isSubmitted = !!storeReport;
+                      const template = storeReport && storeReport.template 
+                        ? storeReport.template
+                        : templates[0]; // Default template
+                      
+                      return (
+                        <div 
+                          key={store.id}
+                          className="grid grid-cols-12 items-center border-b px-4 py-3 hover:bg-muted/20 cursor-pointer"
+                          onClick={() => navigate(`/reports/${store.id}`)}
+                        >
+                          <div className="col-span-5 flex items-center">
+                            <StoreIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">{store.name}</div>
+                              <div className="text-xs text-muted-foreground">{store.location}</div>
+                            </div>
+                          </div>
+                          <div className="col-span-3 text-sm">{store.manager}</div>
+                          <div className="col-span-2 text-sm flex items-center">
+                            <FileText className="h-4 w-4 mr-2 text-primary/60" />
+                            {template?.title || 'N/A'}
+                          </div>
+                          <div className="col-span-2 text-right">
+                            {isSubmitted ? (
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+                                <CheckSquare className="h-3 w-3 mr-1" />
+                                Complete
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="col-span-3 text-sm">{store.manager}</div>
-                        <div className="col-span-2 text-sm flex items-center">
-                          <FileText className="h-4 w-4 mr-2 text-primary/60" />
-                          {template?.title || 'N/A'}
-                        </div>
-                        <div className="col-span-2 text-right">
-                          {isSubmitted ? (
-                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
-                              <CheckSquare className="h-3 w-3 mr-1" />
-                              Complete
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Pending
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+                      );
+                    })
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>

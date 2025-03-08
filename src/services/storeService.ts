@@ -6,7 +6,7 @@ export const getStores = async (): Promise<Store[]> => {
   const { data, error } = await supabase
     .from('stores')
     .select('*')
-    .order('name');
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching stores:', error);
@@ -49,7 +49,7 @@ export const createStore = async (store: Omit<Store, 'id' | 'created_at' | 'upda
 export const updateStore = async (id: string, store: Partial<Omit<Store, 'id' | 'created_at' | 'updated_at' | 'user_id'>>): Promise<Store> => {
   const { data, error } = await supabase
     .from('stores')
-    .update({ ...store, updated_at: new Date().toISOString() })
+    .update(store)
     .eq('id', id)
     .select()
     .single();

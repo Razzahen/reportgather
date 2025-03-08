@@ -5,11 +5,7 @@ import { Report, ReportAnswer } from '@/types/supabase';
 export const getReports = async (): Promise<Report[]> => {
   const { data, error } = await supabase
     .from('reports')
-    .select(`
-      *,
-      store:stores(*),
-      template:templates(*)
-    `)
+    .select('*, store:stores(*), template:templates(*)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -20,34 +16,10 @@ export const getReports = async (): Promise<Report[]> => {
   return data || [];
 };
 
-export const getReportsByStore = async (storeId: string): Promise<Report[]> => {
-  const { data, error } = await supabase
-    .from('reports')
-    .select(`
-      *,
-      store:stores(*),
-      template:templates(*)
-    `)
-    .eq('store_id', storeId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching reports for store:', error);
-    throw error;
-  }
-
-  return data || [];
-};
-
-export const getReportWithAnswers = async (id: string): Promise<Report | null> => {
-  // First get the report
+export const getReportById = async (id: string): Promise<Report | null> => {
   const { data: report, error: reportError } = await supabase
     .from('reports')
-    .select(`
-      *,
-      store:stores(*),
-      template:templates(*)
-    `)
+    .select('*, store:stores(*), template:templates(*)')
     .eq('id', id)
     .single();
 
@@ -58,13 +30,10 @@ export const getReportWithAnswers = async (id: string): Promise<Report | null> =
 
   if (!report) return null;
 
-  // Then get the answers with their questions
+  // Fetch answers for this report
   const { data: answers, error: answersError } = await supabase
     .from('report_answers')
-    .select(`
-      *,
-      question:questions(*)
-    `)
+    .select('*, question:questions(*)')
     .eq('report_id', id);
 
   if (answersError) {
@@ -78,16 +47,32 @@ export const getReportWithAnswers = async (id: string): Promise<Report | null> =
   };
 };
 
+export const getReportsByStoreId = async (storeId: string): Promise<Report[]> => {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*, template:templates(*)')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching reports by store id:', error);
+    throw error;
+  }
+
+  return data || [];
+};
+
 export const createReport = async (
-  report: Omit<Report, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'submitted_at'>,
+  report: Omit<Report, 'id' | 'created_at' | 'updated_at' | 'user_id'>,
   answers: Omit<ReportAnswer, 'id' | 'report_id' | 'created_at' | 'updated_at'>[]
 ): Promise<Report> => {
-  // First create the report
+  // Start a transaction
   const { data: reportData, error: reportError } = await supabase
     .from('reports')
     .insert({
       template_id: report.template_id,
       store_id: report.store_id,
+      submitted_at: report.submitted_at,
       completed: report.completed
     })
     .select()
@@ -98,12 +83,12 @@ export const createReport = async (
     throw reportError;
   }
 
-  // Then create the answers
   if (answers.length > 0) {
-    const answersToInsert = answers.map(a => ({
+    // Create answers for the report
+    const answersToInsert = answers.map(answer => ({
       report_id: reportData.id,
-      question_id: a.question_id,
-      value: a.value
+      question_id: answer.question_id,
+      value: answer.value
     }));
 
     const { error: answersError } = await supabase
@@ -124,7 +109,7 @@ export const updateReport = async (
   report: Partial<Omit<Report, 'id' | 'created_at' | 'updated_at' | 'user_id'>>,
   answers?: Omit<ReportAnswer, 'report_id' | 'created_at' | 'updated_at'>[]
 ): Promise<Report> => {
-  // First update the report
+  // Update report
   const { data: reportData, error: reportError } = await supabase
     .from('reports')
     .update({
@@ -154,10 +139,11 @@ export const updateReport = async (
     }
 
     // Insert new answers
-    const answersToInsert = answers.map(a => ({
+    const answersToInsert = answers.map(answer => ({
       report_id: id,
-      question_id: a.question_id,
-      value: a.value
+      question_id: answer.question_id,
+      value: answer.value,
+      id: answer.id // Keep existing ID if available
     }));
 
     const { error: answersError } = await supabase
@@ -174,6 +160,7 @@ export const updateReport = async (
 };
 
 export const deleteReport = async (id: string): Promise<void> => {
+  // Delete report (answers will cascade)
   const { error } = await supabase
     .from('reports')
     .delete()
@@ -183,27 +170,4 @@ export const deleteReport = async (id: string): Promise<void> => {
     console.error('Error deleting report:', error);
     throw error;
   }
-};
-
-export const generateSummary = async (date: string): Promise<any> => {
-  // This would typically call a custom Supabase function
-  // For now, we'll return mock data similar to what's in mockData.ts
-  return {
-    date: new Date(date),
-    totalStores: 5,
-    reportsSubmitted: 2,
-    averageSales: 10550,
-    topPerformingStore: 'Westfield Mall',
-    keyTrends: [
-      'Casual wear and summer items showing strong sales across stores',
-      'Customer service satisfaction remains high',
-      'Morning hours significantly outperforming afternoon hours',
-      'Accessories and add-on items driving up average transaction value'
-    ],
-    recommendations: [
-      'Consider extending morning staff hours to capitalize on peak traffic',
-      'Implement cross-store inventory sharing to address stock issues',
-      'Provide additional training on new product lines launching next week'
-    ]
-  };
 };
