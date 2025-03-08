@@ -17,6 +17,7 @@ import TemplatesList from "./components/TemplatesList";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ViewTemplate from "./components/ViewTemplate";
 import EditTemplate from "./components/EditTemplate";
+import Stores from "./components/Stores";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,6 +88,14 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <EditTemplate />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/stores" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Stores />
                 </AppLayout>
               </ProtectedRoute>
             } />

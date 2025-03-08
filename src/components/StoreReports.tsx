@@ -105,6 +105,13 @@ export function StoreReports() {
   const today = formatDate(new Date().toISOString());
   const isLoading = isLoadingStores || isLoadingReports || isLoadingTemplates;
   
+  // Debug logging
+  useEffect(() => {
+    console.log('Templates:', templates);
+    console.log('Reports:', reports);
+    console.log('Stores:', stores);
+  }, [templates, reports, stores]);
+  
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -179,9 +186,9 @@ export function StoreReports() {
                   ) : (
                     filteredStores.map((store) => {
                       const storeReport = reports.find(r => r.store_id === store.id);
-                      const template = storeReport && storeReport.template 
-                        ? storeReport.template
-                        : templates[0]; // Default template
+                      const template = storeReport ? 
+                        templates.find(t => t.id === storeReport.template_id) : 
+                        undefined;
                       
                       return (
                         <StoreRow 

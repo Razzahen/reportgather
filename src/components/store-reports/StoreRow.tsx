@@ -29,7 +29,7 @@ export const StoreRow = ({ store, storeReport, template }: StoreRowProps) => {
       <div className="col-span-3 text-sm">{store.manager}</div>
       <div className="col-span-2 text-sm flex items-center">
         <FileText className="h-4 w-4 mr-2 text-primary/60" />
-        {template?.title || 'N/A'}
+        {template ? template.title : 'N/A'}
       </div>
       <div className="col-span-2 text-right">
         {isSubmitted ? (
