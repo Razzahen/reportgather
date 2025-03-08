@@ -150,8 +150,9 @@ export const updateReport = async (
     const answersToInsert = answers.map(answer => ({
       report_id: id,
       question_id: answer.question_id,
-      value: answer.value,
-      id: answer.id // Keep existing ID if available
+      value: answer.value
+      // Remove the id property if it exists since it might be undefined
+      // We'll let Supabase generate a new UUID for each answer
     }));
 
     const { error: answersError } = await supabase
