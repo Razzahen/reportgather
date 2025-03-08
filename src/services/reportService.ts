@@ -1,19 +1,48 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Report, ReportAnswer } from '@/types/supabase';
 
 export const getReports = async (): Promise<Report[]> => {
-  const { data, error } = await supabase
+  // First fetch all reports with their related store and template data
+  const { data: reports, error: reportsError } = await supabase
     .from('reports')
     .select('*, store:stores(*), template:templates(*)')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching reports:', error);
-    throw error;
+  if (reportsError) {
+    console.error('Error fetching reports:', reportsError);
+    throw reportsError;
   }
 
-  return data || [];
+  if (!reports || reports.length === 0) {
+    return [];
+  }
+
+  // Now fetch all answers for these reports in a single query
+  const reportIds = reports.map(report => report.id);
+  
+  const { data: allAnswers, error: answersError } = await supabase
+    .from('report_answers')
+    .select('*, question:questions(*)')
+    .in('report_id', reportIds);
+
+  if (answersError) {
+    console.error('Error fetching report answers:', answersError);
+    throw answersError;
+  }
+
+  // Map answers to their respective reports
+  const reportsWithAnswers = reports.map(report => {
+    const reportAnswers = allAnswers ? allAnswers.filter(answer => answer.report_id === report.id) : [];
+    
+    console.log(`Report ${report.id} has ${reportAnswers.length} answers`);
+    
+    return {
+      ...report,
+      answers: reportAnswers
+    };
+  });
+
+  return reportsWithAnswers;
 };
 
 export const getReportById = async (id: string): Promise<Report | null> => {

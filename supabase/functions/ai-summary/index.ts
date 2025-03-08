@@ -34,7 +34,8 @@ serve(async (req) => {
         Always cite your sources by mentioning store names and dates when providing insights.
         Be concise, professional, and focus on the most important information.
         
-        If there are no report answers available or if answers are empty, clearly state this in your response.`;
+        If there are no report answers available or if answers are empty, clearly state this in your response 
+        and mention that you cannot provide analysis without data.`;
     } else if (mode === 'chat') {
       systemMessage = `You are an AI retail analyst assistant helping with store report queries.
         You have access to report data from stores. When answering questions:
@@ -44,21 +45,26 @@ serve(async (req) => {
         4. Keep answers concise and professional
         
         Always back your statements with evidence from the reports.
-        If there are no report answers available or if answers are empty, clearly state this in your response.`;
+        If there are no report answers available or if answers are empty, clearly state this in your response
+        and mention that you cannot provide analysis without data.`;
     }
     
-    // Prepare context information for the AI with enhanced formatting
+    // Check if we have any meaningful data to analyze
+    const hasValidData = reportData.some(report => 
+      report.answers && 
+      Array.isArray(report.answers) && 
+      report.answers.length > 0 &&
+      report.answers.some(a => a.answer !== undefined && a.answer !== null && a.answer !== 'No answer provided')
+    );
+    
+    console.log("Has valid data for analysis:", hasValidData);
+    
+    // Enhanced context information formatting for the AI
     const reportSummary = reportData.length > 0 
       ? reportData.map(report => {
-          // Check if report has valid answers
-          const hasValidAnswers = report.answers && 
-                                 Array.isArray(report.answers) && 
-                                 report.answers.length > 0 &&
-                                 report.answers.some(a => a.answer !== undefined && a.answer !== null && a.answer !== 'No answer provided');
-          
-          // Format answers or provide a clear message if none exist
-          const answersText = hasValidAnswers
-            ? report.answers.map(a => `- ${a.question}: ${a.answer}`).join("\n")
+          // Format answers for better readability
+          const answersText = report.answers && Array.isArray(report.answers) && report.answers.length > 0
+            ? report.answers.map(a => `- Question: ${a.question}\n  Answer: ${a.answer}`).join("\n")
             : "No answers recorded in this report.";
             
           // Format date for better readability
@@ -87,6 +93,8 @@ REPORT ANALYTICS:
 - Completed Reports: ${reportAnalytics.completedReports}
 - Stores with Reports: ${reportAnalytics.storesWithReports}
 - Reports by Store: ${Object.entries(reportAnalytics.reportsByStore).map(([store, count]) => `${store}: ${count}`).join(', ')}
+- Reports with Answers: ${reportAnalytics.reportsWithAnswers}
+- Total Answers Count: ${reportAnalytics.totalAnswersCount}
 `
       : "";
     
@@ -102,8 +110,14 @@ ${reportSummary}
     console.log("Context for OpenAI:");
     console.log(contextMessage);
     
+    // Provide clear instructions to the AI about the data quality
+    const dataQualityMessage = !hasValidData 
+      ? `IMPORTANT: The reports being analyzed do not contain any meaningful answer data. Please inform the user that you cannot provide any insights without actual report data.`
+      : "";
+    
     const completeMessages = [
       { role: "system", content: systemMessage },
+      { role: "system", content: dataQualityMessage },
       { role: "system", content: contextMessage },
       ...messages
     ];

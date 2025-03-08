@@ -31,35 +31,54 @@ export const generateAISummary = async (
       // Extract relevant information from each report, carefully handling answers
       let answers = [];
       
-      // Only process answers if they exist and are not empty
-      if (report.answers && Array.isArray(report.answers) && report.answers.length > 0) {
-        answers = report.answers.map(answer => {
-          // Ensure we have valid question data
-          const questionText = answer.question?.text || 'Unknown question';
-          const questionType = answer.question?.type || 'text';
+      // Check if answers exist and log detailed information to help with debugging
+      if (report.answers) {
+        console.log(`Processing answers for report ${report.id}. Found ${report.answers.length} answers.`);
+        
+        if (Array.isArray(report.answers) && report.answers.length > 0) {
+          answers = report.answers.map(answer => {
+            // Double check we have question data and log if missing
+            if (!answer.question) {
+              console.warn(`Answer ${answer.id} has no associated question data.`);
+              return {
+                question: 'Unknown question',
+                question_type: 'text',
+                answer: answer.value || 'No answer provided'
+              };
+            }
+            
+            // Ensure we have valid question data
+            const questionText = answer.question.text || 'Unknown question';
+            const questionType = answer.question.type || 'text';
+            
+            // Format the answer value based on its type for better readability
+            let formattedValue = answer.value;
+            
+            // If the value is undefined or null, provide a placeholder
+            if (formattedValue === undefined || formattedValue === null) {
+              formattedValue = 'No answer provided';
+            }
+            
+            // If it's an object or array, stringify it for clarity
+            if (typeof formattedValue === 'object') {
+              formattedValue = JSON.stringify(formattedValue);
+            }
+            
+            return {
+              question: questionText,
+              question_type: questionType,
+              answer: formattedValue,
+            };
+          });
           
-          // Format the answer value based on its type for better readability
-          let formattedValue = answer.value;
-          
-          // If the value is undefined or null, provide a placeholder
-          if (formattedValue === undefined || formattedValue === null) {
-            formattedValue = 'No answer provided';
-          }
-          
-          // If it's an object or array, stringify it for clarity
-          if (typeof formattedValue === 'object') {
-            formattedValue = JSON.stringify(formattedValue);
-          }
-          
-          return {
-            question: questionText,
-            question_type: questionType,
-            answer: formattedValue,
-          };
-        });
+          console.log(`Processed ${answers.length} formatted answers for report ${report.id}`);
+        } else {
+          // Log warning if no answers found for debugging
+          console.warn(`Report has answers property but no actual answers found for report ID: ${report.id}`);
+        }
       } else {
-        // Log warning if no answers found for debugging
-        console.warn(`No answers found for report ID: ${report.id}`);
+        // Log warning if no answers property found for debugging
+        console.warn(`No answers property found for report ID: ${report.id}`);
       }
       
       return {
@@ -83,11 +102,15 @@ export const generateAISummary = async (
           store.name,
           reports.filter(r => r.store_id === store.id).length
         ])
-      )
+      ),
+      reportsWithAnswers: reports.filter(r => r.answers && r.answers.length > 0).length,
+      totalAnswersCount: reports.reduce((total, report) => 
+        total + (report.answers ? report.answers.length : 0), 0)
     };
     
     // Log the data being sent for debugging
     console.log('Reports being sent to AI summary:', reportData);
+    console.log('Report analytics:', reportAnalytics);
     
     // Call our Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('ai-summary', {
